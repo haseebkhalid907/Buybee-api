@@ -15,6 +15,15 @@ const getOrderById = async (id) => {
   return Order.findById(id);
 };
 
+/**
+ * Get order by order number
+ * @param {string} orderNumber
+ * @returns {Promise<Order>}
+ */
+const getOrderByNumber = async (orderNumber) => {
+  return Order.findOne({ orderNumber });
+};
+
 const updateOrderById = async (orderId, updateBody) => {
   const order = await getOrderById(orderId);
   if (!order) {
@@ -38,6 +47,7 @@ module.exports = {
   createOrder,
   queryOrders,
   getOrderById,
+  getOrderByNumber,
   updateOrderById,
   deleteOrderById,
 };

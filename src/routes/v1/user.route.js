@@ -9,14 +9,36 @@ const router = express.Router();
 
 router
   .route('/')
-  .post(auth({action: actions.create, subject: subjects.user}), validate(userValidation.createUser), userController.createUser)
-  .get(auth({action: actions.readAll, subject: subjects.user}), validate(userValidation.getUsers), userController.getUsers);
+  .post(auth({ action: actions.create, subject: subjects.user }), validate(userValidation.createUser), userController.createUser)
+  .get(auth({ action: actions.readAll, subject: subjects.user }), validate(userValidation.getUsers), userController.getUsers);
 
 router
   .route('/:userId')
-  .get(auth({action: actions.read, subject: subjects.user}), validate(userValidation.getUser), userController.getUser)
-  .patch(auth({action: actions.update, subject: subjects.user}), validate(userValidation.updateUser), userController.updateUser)
-  .delete(auth({action: actions.delete, subject: subjects.user}), validate(userValidation.deleteUser), userController.deleteUser);
+  .get(auth({ action: actions.read, subject: subjects.user }), validate(userValidation.getUser), userController.getUser)
+  .patch(auth({ action: actions.update, subject: subjects.user }), validate(userValidation.updateUser), userController.updateUser)
+  .delete(auth({ action: actions.delete, subject: subjects.user }), validate(userValidation.deleteUser), userController.deleteUser);
+
+// Wishlist routes
+router
+  .route('/me/wishlist')
+  .get(auth(), userController.getWishlist)
+  .post(auth(), userController.addToWishlist);
+
+router
+  .route('/me/wishlist/:productId')
+  .delete(auth(), userController.removeFromWishlist);
+
+// Cart routes
+router
+  .route('/me/cart')
+  .get(auth(), userController.getCart)
+  .post(auth(), userController.addToCart)
+  .delete(auth(), userController.clearCart);
+
+router
+  .route('/me/cart/:productId')
+  .patch(auth(), userController.updateCartItem)
+  .delete(auth(), userController.removeFromCart);
 
 module.exports = router;
 
