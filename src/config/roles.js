@@ -1,24 +1,9 @@
-// const allRoles = {
-//   user: [],
-//   admin: ['getUsers', 'manageUsers'],
-// };
+/**
+ * Roles configuration for the application
+ * USER_ROLES: The available user roles
+ * roleRights: The permissions/rights associated with each role
+ */
 
-// const roles = Object.keys(allRoles);
-// const roleRights = new Map(Object.entries(allRoles));
-
-// module.exports = {
-//   roles,
-//   roleRights,
-// };
-
-
-const subjects = {
-  profile: 'profile',
-  user: 'user',
-  product: 'product',
-  order: 'order',
-  all: 'all',
-};
 const actions = {
   read: 'read',
   readAll: 'readAll',
@@ -27,85 +12,32 @@ const actions = {
   update: 'update',
   delete: 'delete',
 };
+const subjects = {
+  profile: 'profile',
+  user: 'user',
+  product: 'product',
+  order: 'order',
+  all: 'all',
+};
+const USER_ROLES = {
+  ADMIN: 'admin',
+  BUYER: 'buyer',
+  SELLER: 'seller',
+};
+
 const allRoles = {
-  user: [
-    // user access
-    {
-      action: actions.read,
-      subject: subjects.user,
-    },
-    // {
-    //   action: actions.readAll,
-    //   subject: subjects.user,
-    // },
-    // //
-    // {
-    //   action: actions.manage,
-    //   subject: subjects.all,
-    // },
-    {
-      action: actions.create,
-      subject: subjects.user,
-    },
-    {
-      action: actions.update,
-      subject: subjects.user,
-    },
-    {
-      action: actions.delete,
-      subject: subjects.user,
-    },
-    {
-      action: actions.read,
-      subject: subjects.product,
-    },
-    {
-      action: actions.create,
-      subject: subjects.product,
-    },
-    {
-      action: actions.update,
-      subject: subjects.product,
-    },
-    {
-      action: actions.delete,
-      subject: subjects.product,
-    },
-
-    // order roles
-    {
-      action: actions.read,
-      subject: subjects.order,
-    },
-    {
-      action: actions.create,
-      subject: subjects.order,
-    },
-    {
-      action: actions.update,
-      subject: subjects.order,
-    },
-    {
-      action: actions.delete,
-      subject: subjects.order,
-    }
-
-
-  ],
-  admin: [
-    {
-      action: actions.manage,
-      subject: subjects.all,
-    },
-  ],
+  [USER_ROLES.BUYER]: ['getProducts', 'getCategories', 'createOrder', 'manageOwnOrders', 'manageOwnProfile'],
+  [USER_ROLES.SELLER]: ['getProducts', 'getCategories', 'manageOwnProducts', 'manageSellerOrders', 'manageOwnProfile'],
+  [USER_ROLES.ADMIN]: ['getUsers', 'manageUsers', 'getProducts', 'manageProducts', 'getCategories', 'manageCategories', 'manageOrders', 'getStats'],
 };
 
 const roles = Object.keys(allRoles);
 const roleRights = new Map(Object.entries(allRoles));
 
 module.exports = {
+  actions,
+  subjects,
   roles,
   roleRights,
-  subjects,
-  actions,
+  USER_ROLES,
 };
