@@ -12,7 +12,7 @@ const createProduct = {
     size: Joi.string().required(),
     colors: Joi.string().required(),
     rating: Joi.number().required(),
-    isFeatured: Joi.boolean(),
+    featured: Joi.boolean(),
     isFavorite: Joi.boolean(),
     type: Joi.string().valid('new', 'used').required(),
   }),
@@ -22,6 +22,9 @@ const getProducts = {
   query: Joi.object().keys({
     name: Joi.string(),
     category: Joi.string(),
+    categoryId: Joi.string().custom(objectId),
+    type: Joi.string(),
+    featured: Joi.boolean(),
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
@@ -50,7 +53,7 @@ const updateProduct = {
       size: Joi.string(),
       colors: Joi.string(),
       rating: Joi.number(),
-      isFeatured: Joi.boolean(),
+      featured: Joi.boolean(),
       isFavorite: Joi.boolean(),
       type: Joi.string().valid('new', 'used'),
     })

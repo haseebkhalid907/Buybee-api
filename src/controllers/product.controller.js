@@ -25,10 +25,17 @@ const getProducts = catchAsync(async (req, res) => {
   const filter = pick(req.query, [
     'name',
     'category',
-    'type'
+    'categoryId',
+    'type',
+    'featured'
   ]);
   if (filter.name) {
     filter.name = new RegExp(filter.name, 'i');
+  }
+  // Map categoryId to category field if provided
+  if (filter.categoryId) {
+    filter.category = filter.categoryId;
+    delete filter.categoryId;
   }
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   const result = await productService.queryProducts(filter, options);

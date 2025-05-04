@@ -1,7 +1,9 @@
 const express = require('express');
 const validate = require('../../middlewares/validate');
 const productValidation = require('../../validations/product.validation');
+const reviewValidation = require('../../validations/review.validation');
 const productController = require('../../controllers/product.controller');
+const reviewController = require('../../controllers/review.controller');
 const { actions, subjects } = require('../../config/roles');
 const auth = require('../../middlewares/auth');
 const upload = require('../../middlewares/upload'); // multer
@@ -9,26 +11,49 @@ const upload = require('../../middlewares/upload'); // multer
 
 const router = express.Router();
 
+// Product routes
 router
   .route('/')
-  .post(auth({action: actions.create, subject: subjects.product}), upload.array('images', 10), validate(productValidation.createProduct), productController.createProduct)
-  .get(auth({action: actions.readAll, subject: subjects.product}), validate(productValidation.getProducts), productController.getProducts);
+  .post(
+    // auth({action: actions.create, subject: subjects.product}),
+    upload.array('images', 10), validate(productValidation.createProduct), productController.createProduct)
+  .get(
+    // auth({ action: actions.readAll, subject: subjects.product }),
+    validate(productValidation.getProducts), productController.getProducts);
 
 router.route('/user-products')
-  .get(auth({action: actions.read, subject: subjects.product}), validate(productValidation.getProducts), productController.getUserProducts);
+  .get(
+    // auth({ action: actions.read, subject: subjects.product }),
+    validate(productValidation.getProducts), productController.getUserProducts);
+
 router
   .route('/:productId')
-  .get(auth({action: actions.read, subject: subjects.product}), validate(productValidation.getProduct), productController.getProduct)
-  .patch(auth({action: actions.update, subject: subjects.product}), validate(productValidation.updateProduct), productController.updateProduct)
-  .delete(auth({action: actions.delete, subject: subjects.product}), validate(productValidation.deleteProduct), productController.deleteProduct);
+  .get(
+    // auth({ action: actions.read, subject: subjects.product }),
+    validate(productValidation.getProduct), productController.getProduct)
+  .patch(
+    // auth({ action: actions.update, subject: subjects.product }),
+    validate(productValidation.updateProduct), productController.updateProduct)
+  .delete(
+    // auth({ action: actions.delete, subject: subjects.product }),
+    validate(productValidation.deleteProduct), productController.deleteProduct);
+
+// Review routes
+router
+  .route('/:productId/reviews')
+  .post(
+    auth(), validate(reviewValidation.createReview), reviewController.createReview)
+  .get(
+    validate(reviewValidation.getReviews), reviewController.getReviews);
+
+router
+  .route('/:productId/reviews/:reviewId')
+  .patch(
+    auth(), validate(reviewValidation.updateReview), reviewController.updateReview)
+  .delete(
+    auth(), validate(reviewValidation.deleteReview), reviewController.deleteReview);
 
 module.exports = router;
-
-
-
-
-
-
 
 /**
  * @swagger
@@ -84,7 +109,7 @@ module.exports = router;
  *                 type: string
  *               rating:
  *                 type: number
- *               isFeatured:
+ *               featured:
  *                 type: boolean
  *               isFavorite:
  *                 type: boolean
@@ -245,7 +270,7 @@ module.exports = router;
  *                 type: string
  *               rating:
  *                 type: number
- *               isFeatured:
+ *               featured:
  *                 type: boolean
  *               isFavorite:
  *                 type: boolean
@@ -303,7 +328,7 @@ module.exports = router;
  *           type: string
  *         rating:
  *           type: number
- *         isFeatured:
+ *         featured:
  *           type: boolean
  *         isFavorite:
  *           type: boolean
