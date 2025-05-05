@@ -89,7 +89,8 @@ const removeFromWishlist = catchAsync(async (req, res) => {
 
 // Cart operations
 const getCart = catchAsync(async (req, res) => {
-  const userId = req.params.userId || req.user.id;
+  const userId = req.params.userId || req.user._id;
+  console.log("🚀 ~ getCart ~ userId:", userId)
   const user = await userService.getUserById(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
@@ -102,7 +103,12 @@ const getCart = catchAsync(async (req, res) => {
 
 const addToCart = catchAsync(async (req, res) => {
   const { productId, quantity = 1 } = req.body;
-  const userId = req.params.userId || req.user.id;
+  const userId = req.params.userId || req.user._id;
+  const uu = req.user;
+  console.log("🚀 ~ addToCart ~ uu:", uu)
+  const uu2 = req.auth;
+  console.log("🚀 ~ addToCart ~ uu2:", uu2)
+  console.log("🚀 ~ addToCart ~ userId:", userId)
 
   if (!productId) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Product ID is required');
@@ -120,11 +126,12 @@ const addToCart = catchAsync(async (req, res) => {
   }
 
   const user = await userService.getUserById(userId);
+  console.log("🚀 ~ addToCart ~ user:", user)
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  user.addToCart(productId, Number(quantity));
+  user.addToCart(productId, Number(quantity), userId);
   await user.save();
 
   res.status(httpStatus.OK).send({ message: 'Product added to cart successfully' });

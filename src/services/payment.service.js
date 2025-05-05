@@ -13,9 +13,15 @@ const createPaymentIntent = async (paymentData) => {
     try {
         const { amount, currency = 'usd', customer, description } = paymentData;
 
+        // Ensure amount is a valid number
+        const validAmount = Number(amount);
+        if (isNaN(validAmount) || validAmount <= 0) {
+            throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid payment amount');
+        }
+
         // Create a payment intent with Stripe
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: Math.round(amount * 100), // Stripe requires amount in cents
+            amount: Math.round(validAmount * 100), // Stripe requires amount in cents
             currency,
             description,
             metadata: {
@@ -45,30 +51,101 @@ const processCheckout = async (checkoutData, user) => {
         shippingAddress,
         billingAddress,
         paymentMethod,
-        notes
+        notes,
+        items: checkoutItems, // Selected items for checkout from the request
+        selectedCartItems = [] // IDs of selected cart items when checking out from cart
     } = checkoutData;
 
-    // Populate cart details
-    await user.populate('cart.product');
+    // Try to use items from request first, then selected cart items, then fall back to user's full cart
+    let cartItems = [];
+    let useCartFromUser = false;
+
+    if (checkoutItems && Array.isArray(checkoutItems) && checkoutItems.length > 0) {
+        // Use items passed directly in the request
+        cartItems = checkoutItems;
+        logger.info(`Using ${cartItems.length} items passed directly in checkout request`);
+    } else if (selectedCartItems.length > 0) {
+        // Populate user's cart
+        await user.populate('cart.product');
+
+        // Filter cart to only include selected items
+        cartItems = user.cart.filter(cartItem => {
+            const itemId = cartItem._id?.toString();
+            return itemId && selectedCartItems.includes(itemId);
+        });
+
+        useCartFromUser = true;
+        logger.info(`Using ${cartItems.length} selected items from user's cart`);
+    } else {
+        // Populate cart details from user (full cart)
+        await user.populate('cart.product');
+
+        // Use all items from user's cart
+        if (user.cart && user.cart.length > 0) {
+            cartItems = user.cart;
+            useCartFromUser = true;
+            logger.info(`Using all ${cartItems.length} items from user's cart`);
+        } else {
+            throw new ApiError(httpStatus.BAD_REQUEST, 'Cart is empty. Please add items to your cart or provide items in the request.');
+        }
+    }
 
     // Validate cart is not empty
-    if (!user.cart || user.cart.length === 0) {
+    if (!cartItems || cartItems.length === 0) {
         throw new ApiError(httpStatus.BAD_REQUEST, 'Cart is empty');
     }
 
     // Calculate order details
     let subtotal = 0;
-    const items = [];
+    const orderItems = [];
 
-    for (const item of user.cart) {
-        const product = item.product;
+    for (const item of cartItems) {
+        // Handle both user cart items and items passed in request
+        let productId;
+        let product;
 
-        // Check product exists and has enough stock
-        if (!product) {
-            throw new ApiError(httpStatus.BAD_REQUEST, 'Product not found');
+        if (useCartFromUser) {
+            // Access _id instead of id to ensure consistent MongoDB ObjectId access
+            productId = item.product?._id || item.product?.id;
+            product = item.product;
+            if (!productId) {
+                console.error('Product ID missing in cart item:', item);
+                throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid product in cart');
+            }
+        } else {
+            // For items sent directly in the request
+            if (item.product) {
+                // If the full product object is passed
+                if (typeof item.product === 'object') {
+                    product = item.product;
+                    productId = item.product._id || item.product.id;
+                } else {
+                    // If just the ID is passed
+                    productId = item.product;
+                    // Fetch product from database
+                    product = await productService.getProductById(productId);
+                }
+            } else if (item.productId) {
+                productId = item.productId;
+                product = await productService.getProductById(productId);
+            } else {
+                throw new ApiError(httpStatus.BAD_REQUEST, 'Product information missing in checkout item');
+            }
         }
 
-        if (product.stock < item.quantity) {
+        if (!productId || !product) {
+            throw new ApiError(httpStatus.BAD_REQUEST, 'Product information is required for each item');
+        }
+
+        const quantity = parseInt(item.quantity) || 1;
+
+        // Verify product has a valid price
+        if (product.price === undefined || product.price === null || isNaN(Number(product.price))) {
+            console.error('Invalid product price:', product);
+            throw new ApiError(httpStatus.BAD_REQUEST, `Invalid price for product: ${product.name || 'Unknown product'}`);
+        }
+
+        if (product.stock !== undefined && product.stock !== null && product.stock < quantity) {
             throw new ApiError(
                 httpStatus.BAD_REQUEST,
                 `Not enough stock available for ${product.name}`
@@ -76,51 +153,99 @@ const processCheckout = async (checkoutData, user) => {
         }
 
         // Calculate item price
-        const itemPrice = product.price;
-        subtotal += itemPrice * item.quantity;
+        const itemPrice = Number(product.price) || 0;
+        const itemTotal = itemPrice * quantity;
+        subtotal += itemTotal;
 
         // Add to order items
-        items.push({
-            product: product._id,
-            quantity: item.quantity,
+        orderItems.push({
+            product: productId,
+            quantity: quantity,
             price: itemPrice,
-            seller: product.seller
+            seller: product.seller || product.userId
         });
 
-        // Update product stock
-        await productService.updateProductById(product._id, {
-            stock: product.stock - item.quantity
-        });
+        // Update product stock (only if stock field exists)
+        if (product.stock !== undefined && product.stock !== null) {
+            await productService.updateProductById(productId, {
+                stock: Math.max(0, product.stock - quantity)
+            });
+        }
     }
+
+    // Ensure subtotal is a valid number
+    subtotal = Number(subtotal) || 0;
 
     // Calculate tax and shipping
     const taxRate = 0.1; // 10% tax
-    const tax = subtotal * taxRate;
+    const tax = Number((subtotal * taxRate).toFixed(2)) || 0;
     const shippingCost = subtotal > 100 ? 0 : 10; // Free shipping over $100
 
-    // Calculate total
-    const total = subtotal + tax + shippingCost;
+    // Calculate total - ensure all values are properly converted to numbers
+    const total = Number((subtotal + tax + shippingCost).toFixed(2)) || 0;
 
     // Generate order number
     const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randomStr = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     const orderNumber = `ORD-${dateStr}-${randomStr}`;
 
+    // Set estimated delivery date (7 days from now)
+    const deliveryDate = new Date();
+    deliveryDate.setDate(deliveryDate.getDate() + 7);
+
+    // Extract shipping info - use firstName, lastName from fullName if available
+    const fullName = shippingAddress?.fullName || '';
+    let firstName = '';
+    let lastName = '';
+
+    if (fullName) {
+        const nameParts = fullName.split(' ');
+        firstName = nameParts[0] || '';
+        lastName = nameParts.slice(1).join(' ') || '';
+    }
+
     // Create order
     const orderData = {
         orderNumber,
         customer: user._id,
-        items,
+        items: orderItems,
         status: 'pending',
-        paymentMethod,
+        paymentMethod: paymentMethod || 'credit_card',
         paymentStatus: 'pending',
-        subtotal,
-        tax,
-        shippingCost,
-        total,
-        shippingAddress,
-        billingAddress,
-        notes,
+        subtotal: subtotal,
+        tax: tax,
+        shippingCost: shippingCost,
+        total: total,
+        phone: String(shippingAddress?.phone || user.phone || ''),
+        shippingCharges: shippingCost,
+        totalAmount: total,
+        firstName: firstName || user.name?.split(' ')[0] || 'Customer',
+        lastName: lastName || user.name?.split(' ').slice(1).join(' ') || 'User',
+        email: user.email || 'customer@example.com',
+        city: String(shippingAddress?.city || ''),
+        country: String(shippingAddress?.country || ''),
+        deliveryDate,
+        estimatedDeliveryDate: deliveryDate,
+        notes: notes || '',
+        // Store address fields in the format expected by the schema
+        shippingAddress: JSON.stringify({
+            fullName: shippingAddress?.fullName || user.name || '',
+            address: shippingAddress?.address || (user.addresses && user.addresses.length > 0 ? user.addresses[0].addressLine1 : ''),
+            city: shippingAddress?.city || (user.addresses && user.addresses.length > 0 ? user.addresses[0].city : ''),
+            state: shippingAddress?.state || (user.addresses && user.addresses.length > 0 ? user.addresses[0].state : ''),
+            postalCode: shippingAddress?.postalCode || (user.addresses && user.addresses.length > 0 ? user.addresses[0].postalCode : ''),
+            country: shippingAddress?.country || (user.addresses && user.addresses.length > 0 ? user.addresses[0].country : ''),
+            phone: shippingAddress?.phone || user.phone || ''
+        }),
+        billingAddress: JSON.stringify({
+            fullName: billingAddress?.fullName || user.name || '',
+            address: billingAddress?.address || (user.addresses && user.addresses.length > 0 ? user.addresses[0].addressLine1 : ''),
+            city: billingAddress?.city || (user.addresses && user.addresses.length > 0 ? user.addresses[0].city : ''),
+            state: billingAddress?.state || (user.addresses && user.addresses.length > 0 ? user.addresses[0].state : ''),
+            postalCode: billingAddress?.postalCode || (user.addresses && user.addresses.length > 0 ? user.addresses[0].postalCode : ''),
+            country: billingAddress?.country || (user.addresses && user.addresses.length > 0 ? user.addresses[0].country : ''),
+            phone: billingAddress?.phone || user.phone || ''
+        }),
         statusHistory: [{
             status: 'pending',
             date: new Date(),
@@ -131,9 +256,11 @@ const processCheckout = async (checkoutData, user) => {
     // Create order in database
     const order = await orderService.createOrder(orderData);
 
-    // Clear user's cart after successful order creation
-    user.clearCart();
-    await user.save();
+    // Clear user's cart after successful order creation if we used the user's cart
+    if (useCartFromUser) {
+        user.cart = [];
+        await user.save();
+    }
 
     return {
         order,

@@ -10,7 +10,9 @@ const router = express.Router();
 router.post('/create-payment-intent', auth(), paymentController.createPaymentIntent);
 
 // Route for processing checkout
-router.post('/checkout', auth(), paymentController.processCheckout);
+router.post('/checkout',
+    auth(),
+    paymentController.processCheckout);
 
 // Route for Stripe webhooks
 // Note: This route is not authenticated as it's called by Stripe
