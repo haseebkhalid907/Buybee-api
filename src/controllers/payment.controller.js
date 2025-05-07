@@ -2,6 +2,8 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { paymentService, userService } = require('../services');
 const ApiError = require('../utils/ApiError');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_51Jh7JGDQKvxeh7WtXe2kJ5RlgXk9zGqOXkzX3gr7V2z2b2ZNY08qSo0XfOFEbrAmSBLD0XBAgz7skmq0hC5YhGof00WJCRyWfP');
+const logger = require('../config/logger');
 
 /**
  * Create a payment intent for Stripe
@@ -43,11 +45,11 @@ const createPaymentIntent = catchAsync(async (req, res) => {
  * Process checkout and create order
  */
 const processCheckout = catchAsync(async (req, res) => {
-    console.log("🚀 ~ processCheckout ~ req.user:", req.user);
     // Make sure we get the user ID correctly from either req.user.id or req.user._id
     const userId = req.user.id || req.user._id;
     const user = await userService.getUserById(userId);
-    console.log("🚀 ~ processCheckout ~ user:", user);
+
+    logger.info('Processing checkout for user:', user.email);
 
     // Extract checkout data including any selected cart items
     const checkoutData = {
@@ -63,42 +65,55 @@ const processCheckout = catchAsync(async (req, res) => {
     if (!req.body.items && user.cart && user.cart.length > 0) {
         const emptyProducts = user.cart.filter(item => !item.product);
         if (emptyProducts.length > 0) {
-            console.error("Found cart items without populated products:", emptyProducts);
+            logger.error("Found cart items without populated products:", emptyProducts);
             throw new ApiError(httpStatus.BAD_REQUEST, 'Some products in your cart are unavailable');
         }
     }
 
     // Create order and generate payment intent
     const checkoutResult = await paymentService.processCheckout(checkoutData, user);
-    console.log("🚀 ~ processCheckout ~ checkoutResult:", checkoutResult)
+    logger.info(`Order created successfully: ${checkoutResult.order.orderNumber}`);
 
     // If credit card payment, create payment intent
     if (req.body.paymentMethod === 'credit_card') {
         // Calculate total from order
         const total = checkoutResult.order.totalAmount;
-        console.log("🚀 ~ processCheckout ~ total:", total)
+        logger.info(`Creating payment intent for order total: ${total}`);
 
         // Verify total is a valid number
         if (isNaN(total) || total <= 0) {
             throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid order total amount');
         }
 
-        // Create payment intent with order reference
-        const paymentIntent = await paymentService.createPaymentIntent({
-            amount: total,
-            currency: 'usd',
-            customer: {
-                email: user.email,
-                _id: user._id
-            },
-            description: `Payment for order #${checkoutResult.order.orderNumber}`,
-            metadata: {
-                orderNumber: checkoutResult.order.orderNumber
-            }
-        });
+        try {
+            // Create payment intent with order reference
+            const paymentIntent = await paymentService.createPaymentIntent({
+                amount: total,
+                currency: 'usd',
+                customer: {
+                    email: user.email,
+                    _id: user._id
+                },
+                description: `Payment for order #${checkoutResult.order.orderNumber}`,
+                metadata: {
+                    orderNumber: checkoutResult.order.orderNumber,
+                    orderId: checkoutResult.order._id.toString()
+                }
+            });
 
-        // Add client secret to response
-        checkoutResult.clientSecret = paymentIntent.clientSecret;
+            logger.info(`Payment intent created: ${paymentIntent.paymentIntentId}`);
+
+            // Add client secret to response
+            checkoutResult.clientSecret = paymentIntent.clientSecret;
+
+            // Log the client secret to help with debugging (partial, not full)
+            const clientSecretStart = paymentIntent.clientSecret.substring(0, 10);
+            const clientSecretEnd = paymentIntent.clientSecret.substring(paymentIntent.clientSecret.length - 5);
+            logger.info(`Client secret generated: ${clientSecretStart}...${clientSecretEnd}`);
+        } catch (error) {
+            logger.error('Error creating payment intent:', error);
+            throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to initialize payment. Please try again.');
+        }
     }
 
     res.status(httpStatus.CREATED).send(checkoutResult);
@@ -108,18 +123,37 @@ const processCheckout = catchAsync(async (req, res) => {
  * Handle Stripe webhook events
  */
 const handleStripeWebhook = catchAsync(async (req, res) => {
-    // Verify webhook signature if needed
-    // const signature = req.headers['stripe-signature'];
+    const signature = req.headers['stripe-signature'];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
     try {
-        const event = req.body;
+        let event;
+
+        // Verify webhook signature if webhook secret is available
+        if (signature && webhookSecret) {
+            try {
+                event = stripe.webhooks.constructEvent(
+                    req.rawBody || req.body, // rawBody should be available if body-parser is configured correctly
+                    signature,
+                    webhookSecret
+                );
+                logger.info('Webhook signature verified successfully');
+            } catch (err) {
+                logger.error('Webhook signature verification failed:', err);
+                return res.status(httpStatus.BAD_REQUEST).send(`Webhook signature verification failed: ${err.message}`);
+            }
+        } else {
+            // If no signature or secret available, use the raw event
+            event = req.body;
+            logger.warn('Webhook received without signature verification');
+        }
 
         // Process different webhook events
         await paymentService.handleStripeWebhook(event);
 
         res.status(httpStatus.OK).send({ received: true });
     } catch (err) {
-        console.error('Stripe webhook error:', err);
+        logger.error('Stripe webhook error:', err);
         res.status(httpStatus.BAD_REQUEST).send(`Webhook Error: ${err.message}`);
     }
 });

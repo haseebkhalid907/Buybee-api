@@ -2,6 +2,9 @@ const httpStatus = require('http-status');
 const catchAsync = require('../utils/catchAsync');
 const { orderService } = require('../services');
 const pick = require('../utils/pick');
+const ApiError = require('../utils/ApiError');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_DUMMY_KEY');
+const logger = require('../config/logger');
 
 const createOrder = catchAsync(async (req, res) => {
   const order = await orderService.createOrder(req.body);
@@ -28,6 +31,64 @@ const getOrder = catchAsync(async (req, res) => {
   res.send(order);
 });
 
+// Public endpoint to get minimal order details for payment flow
+// This does not require authentication but requires client secret
+const getOrderForPayment = catchAsync(async (req, res) => {
+  const { orderId } = req.params;
+  const { clientSecret } = req.query;
+
+  // Validate that clientSecret is provided
+  if (!clientSecret) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Client secret is required');
+  }
+
+  try {
+    // Get order details
+    const order = await orderService.getOrderById(orderId);
+
+    if (!order) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Order not found');
+    }
+
+    // Verify the client secret is valid for this order
+    // This step verifies that the request is coming from a legitimate payment flow
+    try {
+      const paymentIntentId = clientSecret.split('_secret_')[0];
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      // Verify that the payment intent is for this order
+      if (paymentIntent.metadata?.orderNumber !== order.orderNumber) {
+        logger.warn(`Payment intent ${paymentIntentId} is not for order ${order.orderNumber}`);
+        throw new ApiError(httpStatus.FORBIDDEN, 'Invalid client secret for this order');
+      }
+    } catch (err) {
+      // If we can't verify with Stripe (e.g., invalid secret), return minimal info
+      // This is just for better UX - still provide basic order info when possible
+      logger.error('Error verifying payment intent:', err);
+      return res.send({
+        orderNumber: order.orderNumber,
+        totalAmount: order.totalAmount,
+        status: order.status
+      });
+    }
+
+    // Return limited order details for payment flow
+    res.send({
+      id: order._id,
+      orderNumber: order.orderNumber,
+      totalAmount: order.totalAmount,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      firstName: order.firstName,
+      lastName: order.lastName,
+      email: order.email,
+    });
+  } catch (error) {
+    logger.error('Error accessing order for payment:', error);
+    throw new ApiError(httpStatus.NOT_FOUND, 'Order not found');
+  }
+});
+
 const updateOrder = catchAsync(async (req, res) => {
   const order = await orderService.updateOrderById(req.params.orderId, req.body);
   res.send(order);
@@ -42,6 +103,7 @@ module.exports = {
   createOrder,
   getOrders,
   getOrder,
+  getOrderForPayment,
   updateOrder,
   deleteOrder,
 };

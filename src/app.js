@@ -22,6 +22,20 @@ if (config.env !== 'test') {
   app.use(morgan.errorHandler);
 }
 
+// Special handling for Stripe webhooks to preserve raw body
+app.use('/v1/payments/webhook',
+  express.raw({ type: 'application/json' }),
+  (req, res, next) => {
+    // Store raw body for Stripe webhook verification
+    req.rawBody = req.body;
+    // Parse for our route handlers 
+    if (req.body && req.body.toString) {
+      req.body = JSON.parse(req.body.toString());
+    }
+    next();
+  }
+);
+
 // set security HTTP headers
 app.use(helmet());
 

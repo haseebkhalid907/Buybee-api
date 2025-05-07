@@ -274,7 +274,10 @@ const processCheckout = async (checkoutData, user) => {
  * @returns {Promise<void>}
  */
 const handleStripeWebhook = async (event) => {
+    logger.info(`Processing webhook event: ${event.type}`);
+
     switch (event.type) {
+        // Payment Intent Events
         case 'payment_intent.succeeded': {
             const paymentIntent = event.data.object;
             const orderNumber = paymentIntent.metadata.orderNumber;
@@ -303,10 +306,15 @@ const handleStripeWebhook = async (event) => {
                             }
                         ]
                     });
+
+                    logger.info(`Updated order ${orderNumber} to paid status`);
+                } else {
+                    logger.error(`Order not found for payment intent ${paymentIntent.id}`);
                 }
             }
             break;
         }
+
         case 'payment_intent.payment_failed': {
             const paymentIntent = event.data.object;
             const orderNumber = paymentIntent.metadata.orderNumber;
@@ -329,10 +337,121 @@ const handleStripeWebhook = async (event) => {
                             }
                         ]
                     });
+
+                    logger.info(`Updated order ${orderNumber} to failed payment status`);
                 }
             }
             break;
         }
+
+        // Checkout Session Events
+        case 'checkout.session.completed': {
+            const session = event.data.object;
+            const orderNumber = session.metadata?.orderNumber;
+
+            if (orderNumber) {
+                const order = await orderService.getOrderByNumber(orderNumber);
+
+                if (order) {
+                    await orderService.updateOrderById(order._id, {
+                        paymentStatus: session.payment_status === 'paid' ? 'paid' : 'pending',
+                        status: session.payment_status === 'paid' ? 'processing' : 'pending',
+                        statusHistory: [
+                            ...order.statusHistory,
+                            {
+                                status: session.payment_status === 'paid' ? 'processing' : 'pending',
+                                date: new Date(),
+                                note: `Checkout session completed: ${session.payment_status}`
+                            }
+                        ]
+                    });
+
+                    logger.info(`Updated order ${orderNumber} based on completed checkout session`);
+                }
+            }
+            break;
+        }
+
+        case 'checkout.session.async_payment_succeeded': {
+            const session = event.data.object;
+            const orderNumber = session.metadata?.orderNumber;
+
+            if (orderNumber) {
+                const order = await orderService.getOrderByNumber(orderNumber);
+
+                if (order) {
+                    await orderService.updateOrderById(order._id, {
+                        paymentStatus: 'paid',
+                        status: 'processing',
+                        statusHistory: [
+                            ...order.statusHistory,
+                            {
+                                status: 'processing',
+                                date: new Date(),
+                                note: 'Async payment succeeded'
+                            }
+                        ]
+                    });
+
+                    logger.info(`Updated order ${orderNumber} to paid status from async payment`);
+                }
+            }
+            break;
+        }
+
+        case 'checkout.session.async_payment_failed': {
+            const session = event.data.object;
+            const orderNumber = session.metadata?.orderNumber;
+
+            if (orderNumber) {
+                const order = await orderService.getOrderByNumber(orderNumber);
+
+                if (order) {
+                    await orderService.updateOrderById(order._id, {
+                        paymentStatus: 'failed',
+                        statusHistory: [
+                            ...order.statusHistory,
+                            {
+                                status: 'pending',
+                                date: new Date(),
+                                note: 'Async payment failed'
+                            }
+                        ]
+                    });
+
+                    logger.info(`Updated order ${orderNumber} to failed payment status from async payment`);
+                }
+            }
+            break;
+        }
+
+        case 'checkout.session.expired': {
+            const session = event.data.object;
+            const orderNumber = session.metadata?.orderNumber;
+
+            if (orderNumber) {
+                const order = await orderService.getOrderByNumber(orderNumber);
+
+                if (order) {
+                    await orderService.updateOrderById(order._id, {
+                        paymentStatus: 'failed',
+                        status: 'cancelled',
+                        statusHistory: [
+                            ...order.statusHistory,
+                            {
+                                status: 'cancelled',
+                                date: new Date(),
+                                note: 'Payment session expired'
+                            }
+                        ]
+                    });
+
+                    logger.info(`Updated order ${orderNumber} to cancelled status due to expired session`);
+                }
+            }
+            break;
+        }
+
         default:
             // Handle other event types as needed
             logger.info(`Unhandled Stripe event type: ${event.type}`);

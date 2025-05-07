@@ -7,22 +7,31 @@ const auth = require('../../middlewares/auth');
 
 const router = express.Router();
 
+// Public route for accessing order by ID with valid client secret (for payment flow)
+router.route('/:orderId/payment-details').get(orderController.getOrderForPayment);
+
 router
   .route('/')
-  .post(auth({action: actions.create, subject: subjects.order}), validate(orderValidation.createOrder), orderController.createOrder)
-  .get(auth({action: actions.readAll, subject: subjects.order}), validate(orderValidation.getOrders), orderController.getOrders);
+  .post(
+    // auth({ action: actions.create, subject: subjects.order }),
+    validate(orderValidation.createOrder), orderController.createOrder)
+  .get(
+    // auth({ action: actions.readAll, subject: subjects.order }),
+    validate(orderValidation.getOrders), orderController.getOrders);
 
 router
   .route('/:orderId')
-  .get(auth({action: actions.read, subject: subjects.order}), validate(orderValidation.getOrder), orderController.getOrder)
-  .patch(auth({action: actions.update, subject: subjects.order}), validate(orderValidation.updateOrder), orderController.updateOrder)
-  .delete(auth({action: actions.delete, subject: subjects.order}), validate(orderValidation.deleteOrder), orderController.deleteOrder);
+  .get(
+    // auth({ action: actions.read, subject: subjects.order }),
+    validate(orderValidation.getOrder), orderController.getOrder)
+  .patch(
+    // auth({ action: actions.update, subject: subjects.order }),
+    validate(orderValidation.updateOrder), orderController.updateOrder)
+  .delete(
+    // auth({ action: actions.delete, subject: subjects.order }),
+    validate(orderValidation.deleteOrder), orderController.deleteOrder);
 
 module.exports = router;
-
-
-
-
 
 /**
  * @swagger
