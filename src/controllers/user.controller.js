@@ -37,18 +37,38 @@ const deleteUser = catchAsync(async (req, res) => {
 // Wishlist operations
 const getWishlist = catchAsync(async (req, res) => {
   const userId = req.params.userId || req.user.id;
+
   const user = await userService.getUserById(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  // Populate product details in the wishlist
-  await user.populate('wishlist');
-  res.send(user.wishlist);
+  // Check if the user has any items in wishlist
+  if (!user.wishlist || user.wishlist.length === 0) {
+    return res.send([]);
+  }
+
+  // Get full product details for all wishlist items
+  const populatedWishlist = await Promise.all(
+    user.wishlist.map(async (productId) => {
+      try {
+        const product = await productService.getProductById(productId);
+        return product;
+      } catch (err) {
+        console.error(`Error fetching product ${productId}:`, err);
+        return null;
+      }
+    })
+  );
+
+  // Filter out null results
+  const validProducts = populatedWishlist.filter(product => product !== null);
+  res.send(validProducts);
 });
 
 const addToWishlist = catchAsync(async (req, res) => {
   const { productId } = req.body;
+  console.log("🚀 ~ addToWishlist ~ productId:", productId)
   const userId = req.params.userId || req.user.id;
 
   if (!productId) {
@@ -57,11 +77,13 @@ const addToWishlist = catchAsync(async (req, res) => {
 
   // Check if the product exists
   const product = await productService.getProductById(productId);
+  console.log("🚀 ~ addToWishlist ~ product:", product)
   if (!product) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Product not found');
   }
 
   const user = await userService.getUserById(userId);
+  console.log("🚀 ~ addToWishlist ~ user:", user)
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
@@ -138,7 +160,7 @@ const addToCart = catchAsync(async (req, res) => {
 });
 
 const updateCartItem = catchAsync(async (req, res) => {
-  const { productId } = req.params;
+  const { productId } = req.params; // This is actually the cart item ID
   const { quantity } = req.body;
   const userId = req.params.userId || req.user.id;
 
@@ -146,7 +168,20 @@ const updateCartItem = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Valid quantity is required');
   }
 
-  const product = await productService.getProductById(productId);
+  // Get the user
+  const user = await userService.getUserById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Find the cart item by its ID
+  const cartItem = user.cart.id(productId);
+  if (!cartItem) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Cart item not found');
+  }
+
+  // Get the product to check stock
+  const product = await productService.getProductById(cartItem.product);
   if (!product) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Product not found');
   }
@@ -156,19 +191,17 @@ const updateCartItem = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Not enough stock available');
   }
 
-  const user = await userService.getUserById(userId);
-  if (!user) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
-  }
+  // Update the quantity directly on the subdocument
+  cartItem.quantity = Number(quantity);
+  cartItem.addedAt = Date.now();
 
-  user.updateCartItemQuantity(productId, Number(quantity));
   await user.save();
 
   res.status(httpStatus.OK).send({ message: 'Cart updated successfully' });
 });
 
 const removeFromCart = catchAsync(async (req, res) => {
-  const { productId } = req.params;
+  const { productId } = req.params; // This is actually the cart item ID
   const userId = req.params.userId || req.user.id;
 
   const user = await userService.getUserById(userId);
@@ -176,7 +209,14 @@ const removeFromCart = catchAsync(async (req, res) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
 
-  user.removeFromCart(productId);
+  // Find the cart item by its ID
+  const cartItem = user.cart.id(productId);
+  if (!cartItem) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Cart item not found');
+  }
+
+  // Remove the item from the cart array using Mongoose subdocument remove method
+  cartItem.remove();
   await user.save();
 
   res.status(httpStatus.OK).send({ message: 'Product removed from cart successfully' });
