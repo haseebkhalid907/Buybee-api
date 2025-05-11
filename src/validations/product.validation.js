@@ -21,6 +21,21 @@ const createProduct = {
     exchangeable: Joi.string().allow('', null),
     location: Joi.string().allow('', null),
     userId: Joi.string().custom(objectId),
+    // Add boost fields validation
+    boost: Joi.object().keys({
+      active: Joi.boolean(),
+      package: Joi.string().valid('package1', 'package2', 'package3', 'custom'),
+      cost: Joi.number().min(0),
+      days: Joi.number().min(1),
+      startDate: Joi.date().iso(),
+      endDate: Joi.date().iso(),
+      paymentDetails: Joi.object().keys({
+        cardLastFour: Joi.string(),
+        expiryDate: Joi.string(),
+        transactionId: Joi.string(),
+        paymentDate: Joi.date().iso()
+      })
+    }),
   }),
 };
 
@@ -67,6 +82,21 @@ const updateProduct = {
       condition: Joi.string().valid('new', 'like-new', 'good', 'fair', 'poor'),
       exchangeable: Joi.string().allow('', null),
       location: Joi.string().allow('', null),
+      // Add boost fields validation for update
+      boost: Joi.object().keys({
+        active: Joi.boolean(),
+        package: Joi.string().valid('package1', 'package2', 'package3', 'custom'),
+        cost: Joi.number().min(0),
+        days: Joi.number().min(1),
+        startDate: Joi.date().iso(),
+        endDate: Joi.date().iso(),
+        paymentDetails: Joi.object().keys({
+          cardLastFour: Joi.string(),
+          expiryDate: Joi.string(),
+          transactionId: Joi.string(),
+          paymentDate: Joi.date().iso()
+        })
+      }),
     })
     .min(1),
 };

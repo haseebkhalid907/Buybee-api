@@ -10,6 +10,18 @@
       "env": {
         "NODE_ENV": "production"
       }
+    },
+    {
+      "name": "boost-expiration-checker",
+      "script": "src/scripts/check-boost-expiration.js",
+      "instances": 1,
+      "exec_mode": "fork",
+      "cron_restart": "0 0 * * *", // Run at midnight every day
+      "watch": false,
+      "autorestart": false,
+      "env": {
+        "NODE_ENV": "production"
+      }
     }
   ]
 }

@@ -83,6 +83,38 @@ const productSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Add boost subscription fields
+    boost: {
+      active: {
+        type: Boolean,
+        default: false
+      },
+      package: {
+        type: String,
+        enum: ['package1', 'package2', 'package3', 'custom'],
+        default: 'custom'
+      },
+      cost: {
+        type: Number,
+        min: 0
+      },
+      days: {
+        type: Number,
+        min: 1
+      },
+      startDate: {
+        type: Date
+      },
+      endDate: {
+        type: Date
+      },
+      paymentDetails: {
+        cardLastFour: String,
+        expiryDate: String,
+        transactionId: String,
+        paymentDate: Date
+      }
+    },
     discount: {
       percentage: {
         type: Number,
