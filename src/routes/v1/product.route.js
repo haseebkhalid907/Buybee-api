@@ -7,7 +7,7 @@ const reviewController = require('../../controllers/review.controller');
 const { actions, subjects } = require('../../config/roles');
 const auth = require('../../middlewares/auth');
 const upload = require('../../middlewares/upload'); // multer
-
+const categoryResolver = require('../../middlewares/categoryResolver'); // Added category resolver middleware
 
 const router = express.Router();
 
@@ -15,8 +15,12 @@ const router = express.Router();
 router
   .route('/')
   .post(
-    // auth({action: actions.create, subject: subjects.product}),
-    upload.array('images', 10), validate(productValidation.createProduct), productController.createProduct)
+    auth(),
+    // auth({ action: actions.create, subject: subjects.product }),
+    upload.array('images', 10),
+    categoryResolver, // Added middleware to resolve category names to IDs
+    validate(productValidation.createProduct),
+    productController.createProduct)
   .get(
     // auth({ action: actions.readAll, subject: subjects.product }),
     validate(productValidation.getProducts), productController.getProducts);

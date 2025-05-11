@@ -44,6 +44,20 @@ const productSchema = mongoose.Schema(
       enum: ['new', 'like-new', 'good', 'fair', 'poor'],
       required: true,
     },
+    // New optional fields
+    brand: {
+      type: String,
+      trim: true,
+    },
+    exchangeable: {
+      type: String,
+      trim: true,
+      default: 'No',
+    },
+    location: {
+      type: String,
+      trim: true,
+    },
     specifications: {
       type: Map,
       of: String,

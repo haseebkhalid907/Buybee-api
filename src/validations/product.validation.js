@@ -15,6 +15,12 @@ const createProduct = {
     featured: Joi.boolean(),
     isFavorite: Joi.boolean(),
     type: Joi.string().valid('new', 'used').required(),
+    // Add new optional fields to validation
+    brand: Joi.string().allow('', null),
+    condition: Joi.string().valid('new', 'like-new', 'good', 'fair', 'poor'),
+    exchangeable: Joi.string().allow('', null),
+    location: Joi.string().allow('', null),
+    userId: Joi.string().custom(objectId),
   }),
 };
 
@@ -56,6 +62,11 @@ const updateProduct = {
       featured: Joi.boolean(),
       isFavorite: Joi.boolean(),
       type: Joi.string().valid('new', 'used'),
+      // Add new optional fields to update validation
+      brand: Joi.string().allow('', null),
+      condition: Joi.string().valid('new', 'like-new', 'good', 'fair', 'poor'),
+      exchangeable: Joi.string().allow('', null),
+      location: Joi.string().allow('', null),
     })
     .min(1),
 };
