@@ -33,7 +33,8 @@ const createProduct = {
         cardLastFour: Joi.string(),
         expiryDate: Joi.string(),
         transactionId: Joi.string(),
-        paymentDate: Joi.date().iso()
+        paymentDate: Joi.date().iso(),
+        paymentStatus: Joi.string() // Adding paymentStatus field
       })
     }),
   }),
@@ -94,7 +95,8 @@ const updateProduct = {
           cardLastFour: Joi.string(),
           expiryDate: Joi.string(),
           transactionId: Joi.string(),
-          paymentDate: Joi.date().iso()
+          paymentDate: Joi.date().iso(),
+          paymentStatus: Joi.string() // Adding paymentStatus field
         })
       }),
     })

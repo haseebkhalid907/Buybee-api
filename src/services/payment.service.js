@@ -458,8 +458,105 @@ const handleStripeWebhook = async (event) => {
     }
 };
 
+/**
+ * Process a payment using the specified payment method
+ * @param {Object} paymentData - Payment data
+ * @returns {Promise<Object>} - Payment result
+ */
+const processPayment = async (paymentData) => {
+    const { amount, paymentMethod, cardDetails, userId, description } = paymentData;
+
+    logger.info(`Processing payment: ${amount} via ${paymentMethod} for user ${userId}`);
+
+    // In production, this would call the payment processor API
+    // For now, validate basic card data and return a simulated response
+    if (!cardDetails || !cardDetails.number) {
+        throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid card details');
+    }
+
+    // Basic validation for demonstration
+    const cardNumber = cardDetails.number.replace(/\s/g, '');
+    if (cardNumber.length !== 16) {
+        throw new ApiError(httpStatus.BAD_REQUEST, 'Card number must be 16 digits');
+    }
+
+    // Simulate a payment processing delay
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Test card numbers that will succeed (same as frontend)
+    const testCards = ["4242424242424242", "5555555555554444", "4111111111111111"];
+
+    if (!testCards.includes(cardNumber)) {
+        throw new ApiError(httpStatus.PAYMENT_REQUIRED, 'Card declined');
+    }
+
+    // Simulate successful payment
+    return {
+        id: `pay_${Math.random().toString(36).substring(2, 15)}`,
+        amount,
+        status: 'succeeded',
+        paymentMethod,
+        created: Date.now(),
+        description
+    };
+};
+
+/**
+ * Process a checkout payment for an order
+ * @param {string} orderId - Order ID
+ * @param {string} paymentMethod - Payment method ID or type
+ * @param {number} amount - Amount to charge
+ * @param {string} userId - User ID
+ * @returns {Promise<Object>} - Payment result
+ */
+const processCheckoutPayment = async (orderId, paymentMethod, amount, userId) => {
+    logger.info(`Processing checkout payment for order: ${orderId}`);
+
+    // In production, this would validate the order and call the payment processor
+    // For now, return a simulated payment response
+    return {
+        success: true,
+        orderId,
+        paymentId: `pay_${Math.random().toString(36).substring(2, 15)}`,
+        amount,
+        status: 'completed',
+        transactionDate: new Date().toISOString()
+    };
+};
+
+/**
+ * Process webhook events from payment providers like Stripe
+ * @param {Object} event - Webhook event data
+ * @returns {Promise<void>}
+ */
+const processWebhookEvent = async (event) => {
+    logger.info(`Processing webhook event: ${event.type}`);
+
+    // Handle different event types from payment providers
+    switch (event.type) {
+        case 'payment_intent.succeeded':
+            // Update relevant order/subscription status
+            logger.info(`Payment succeeded: ${event.data?.id}`);
+            break;
+
+        case 'payment_intent.payment_failed':
+            logger.warn(`Payment failed: ${event.data?.id}`);
+            break;
+
+        case 'charge.refunded':
+            logger.info(`Payment refunded: ${event.data?.id}`);
+            break;
+
+        default:
+            logger.info(`Unhandled webhook event type: ${event.type}`);
+    }
+};
+
 module.exports = {
     createPaymentIntent,
     processCheckout,
-    handleStripeWebhook
+    handleStripeWebhook,
+    processPayment,
+    processCheckoutPayment,
+    processWebhookEvent
 };

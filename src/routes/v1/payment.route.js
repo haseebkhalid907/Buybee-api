@@ -1,6 +1,7 @@
 const express = require('express');
 const auth = require('../../middlewares/auth');
 const paymentController = require('../../controllers/payment.controller');
+const boostController = require('../../controllers/boost.controller');
 const validate = require('../../middlewares/validate');
 // We'll add validation schemas later if needed
 
@@ -8,6 +9,9 @@ const router = express.Router();
 
 // Route for creating payment intents
 router.post('/create-payment-intent', auth(), paymentController.createPaymentIntent);
+
+// Route for processing boost payments - now using boostController
+router.post('/create-boost-payment', auth(), boostController.createBoostPayment);
 
 // Route for processing checkout
 router.post('/checkout',
@@ -52,6 +56,78 @@ module.exports = router;
  *         $ref: '#/components/responses/Unauthorized'
  *       "404":
  *         $ref: '#/components/responses/NotFound'
+ */
+
+/**
+ * @swagger
+ * /payments/create-boost-payment:
+ *   post:
+ *     summary: Process a boost subscription payment
+ *     description: Creates a payment for boosting a product listing
+ *     tags: [Payments]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *               - paymentMethod
+ *               - cardDetails
+ *             properties:
+ *               amount:
+ *                 type: number
+ *                 description: Amount to charge
+ *               paymentMethod:
+ *                 type: string
+ *                 enum: [credit_card, paypal]
+ *                 default: credit_card
+ *               cardDetails:
+ *                 type: object
+ *                 properties:
+ *                   number:
+ *                     type: string
+ *                     description: Credit card number
+ *                   expiry:
+ *                     type: string
+ *                     description: Expiry date (MM/YY)
+ *                   cvc:
+ *                     type: string
+ *                     description: CVC security code
+ *                   name:
+ *                     type: string
+ *                     description: Cardholder name
+ *               boostData:
+ *                 type: object
+ *                 description: Boost subscription details
+ *     responses:
+ *       "201":
+ *         description: Payment processed successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 paymentId:
+ *                   type: string
+ *                 amount:
+ *                   type: number
+ *                 status:
+ *                   type: string
+ *                 transactionDate:
+ *                   type: string
+ *                   format: date-time
+ *       "401":
+ *         $ref: '#/components/responses/Unauthorized'
+ *       "402":
+ *         description: Payment failed
+ *       "400":
+ *         $ref: '#/components/responses/BadRequest'
  */
 
 /**
