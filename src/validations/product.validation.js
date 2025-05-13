@@ -47,6 +47,8 @@ const getProducts = {
     categoryId: Joi.string().custom(objectId),
     type: Joi.string(),
     featured: Joi.boolean(),
+    startDate: Joi.date().iso(),
+    endDate: Joi.date().iso(),
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),

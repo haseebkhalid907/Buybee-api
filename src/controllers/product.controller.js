@@ -40,7 +40,9 @@ const getProducts = catchAsync(async (req, res) => {
     'category',
     'categoryId',
     'type',
-    'featured'
+    'featured',
+    'startDate',
+    'endDate'
   ]);
   if (filter.name) {
     filter.name = new RegExp(filter.name, 'i');
@@ -50,6 +52,20 @@ const getProducts = catchAsync(async (req, res) => {
     filter.category = filter.categoryId;
     delete filter.categoryId;
   }
+
+  // Handle date range filtering
+  if (filter.startDate || filter.endDate) {
+    filter.createdAt = {};
+    if (filter.startDate) {
+      filter.createdAt.$gte = new Date(filter.startDate);
+      delete filter.startDate;
+    }
+    if (filter.endDate) {
+      filter.createdAt.$lte = new Date(filter.endDate);
+      delete filter.endDate;
+    }
+  }
+
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   const result = await productService.queryProducts(filter, options);
   res.send(result);
