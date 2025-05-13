@@ -116,6 +116,29 @@ const userSchema = mongoose.Schema(
         type: Boolean,
         default: false,
       },
+      // Add seller registration progress tracking
+      registrationCompleted: {
+        type: Boolean,
+        default: false
+      },
+      registrationSteps: {
+        termsAccepted: {
+          type: Boolean,
+          default: false
+        },
+        storeInfoCompleted: {
+          type: Boolean,
+          default: false
+        },
+        personalInfoCompleted: {
+          type: Boolean,
+          default: false
+        },
+        bankInfoCompleted: {
+          type: Boolean,
+          default: false
+        }
+      },
       rating: {
         average: {
           type: Number,

@@ -7,6 +7,12 @@ const { actions, subjects } = require('../../config/roles');
 
 const router = express.Router();
 
+// Add dedicated profile route for current user
+router
+  .route('/profile')
+  .get(auth(), userController.getCurrentUser)
+  .patch(auth(), validate(userValidation.updateProfile), userController.updateCurrentUser);
+
 router
   .route('/')
   .post(
@@ -27,6 +33,24 @@ router
   .delete(
     // auth({ action: actions.delete, subject: subjects.user }),
     validate(userValidation.deleteUser), userController.deleteUser);
+
+// Seller Registration routes
+router
+  .route('/:userId/seller-registration')
+  .get(auth(), userController.getSellerRegistrationStatus)
+  .patch(auth(), userController.updateSellerRegistrationStep);
+
+// Add routes for current user's seller registration
+router
+  .route('/me/seller-registration')
+  .get(auth(), (req, res, next) => {
+    req.params.userId = req.user.id;
+    next();
+  }, userController.getSellerRegistrationStatus)
+  .patch(auth(), (req, res, next) => {
+    req.params.userId = req.user.id;
+    next();
+  }, userController.updateSellerRegistrationStep);
 
 // Wishlist routes
 router
@@ -147,7 +171,7 @@ module.exports = router;
  *         schema:
  *           type: integer
  *           minimum: 1
- *           default: 1
+ *         default: 1
  *         description: Page number
  *     responses:
  *       "200":

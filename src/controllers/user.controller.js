@@ -17,7 +17,9 @@ const getUsers = catchAsync(async (req, res) => {
 });
 
 const getUser = catchAsync(async (req, res) => {
-  const user = await userService.getUserById(req.params.userId);
+  // Handle the special 'me' parameter by replacing it with the authenticated user's ID
+  const userId = req.params.userId === 'me' ? req.user._id : req.params.userId;
+  const user = await userService.getUserById(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
@@ -25,7 +27,9 @@ const getUser = catchAsync(async (req, res) => {
 });
 
 const updateUser = catchAsync(async (req, res) => {
-  const user = await userService.updateUserById(req.params.userId, req.body);
+  // Handle the special 'me' parameter by replacing it with the authenticated user's ID
+  const userId = req.params.userId === 'me' ? req.user._id : req.params.userId;
+  const user = await userService.updateUserById(userId, req.body);
   res.send(user);
 });
 
@@ -236,6 +240,93 @@ const clearCart = catchAsync(async (req, res) => {
   res.status(httpStatus.OK).send({ message: 'Cart cleared successfully' });
 });
 
+// Seller Registration Step Management
+const updateSellerRegistrationStep = catchAsync(async (req, res) => {
+  // Handle the special 'me' parameter by replacing it with the authenticated user's ID
+  const userId = req.params.userId === 'me' ? req.user._id : req.params.userId;
+  const { step, completed } = req.body;
+
+  if (!step || typeof completed !== 'boolean') {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Step name and completion status are required');
+  }
+
+  // Validate step name
+  const validSteps = ['termsAccepted', 'storeInfoCompleted', 'personalInfoCompleted', 'bankInfoCompleted'];
+  if (!validSteps.includes(step)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, `Invalid step name. Must be one of: ${validSteps.join(', ')}`);
+  }
+
+  const user = await userService.getUserById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Initialize sellerProfile and registrationSteps if they don't exist
+  if (!user.sellerProfile) {
+    user.sellerProfile = {};
+  }
+  if (!user.sellerProfile.registrationSteps) {
+    user.sellerProfile.registrationSteps = {};
+  }
+
+  // Update the specific step
+  user.sellerProfile.registrationSteps[step] = completed;
+
+  // Check if all steps are completed
+  const allStepsCompleted = validSteps.every(stepName =>
+    user.sellerProfile.registrationSteps[stepName] === true
+  );
+
+  // Update the overall registration completion status
+  user.sellerProfile.registrationCompleted = allStepsCompleted;
+
+  await user.save();
+  res.status(httpStatus.OK).send({
+    message: `Seller registration step '${step}' updated successfully`,
+    registrationCompleted: user.sellerProfile.registrationCompleted,
+    registrationSteps: user.sellerProfile.registrationSteps
+  });
+});
+
+const getSellerRegistrationStatus = catchAsync(async (req, res) => {
+  // Handle the special 'me' parameter by replacing it with the authenticated user's ID
+  const userId = req.params.userId === 'me' ? req.user._id : req.params.userId;
+
+  const user = await userService.getUserById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Return registration status or defaults if not set
+  const registrationStatus = {
+    registrationCompleted: user.sellerProfile?.registrationCompleted || false,
+    registrationSteps: user.sellerProfile?.registrationSteps || {
+      termsAccepted: false,
+      storeInfoCompleted: false,
+      personalInfoCompleted: false,
+      bankInfoCompleted: false
+    }
+  };
+
+  res.status(httpStatus.OK).send(registrationStatus);
+});
+
+// Current user profile handlers
+const getCurrentUser = catchAsync(async (req, res) => {
+  const userId = req.user._id;
+  const user = await userService.getUserById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+  res.send(user);
+});
+
+const updateCurrentUser = catchAsync(async (req, res) => {
+  const userId = req.user._id;
+  const user = await userService.updateUserById(userId, req.body);
+  res.send(user);
+});
+
 module.exports = {
   createUser,
   getUsers,
@@ -250,4 +341,8 @@ module.exports = {
   updateCartItem,
   removeFromCart,
   clearCart,
+  updateSellerRegistrationStep,
+  getSellerRegistrationStatus,
+  getCurrentUser,
+  updateCurrentUser,
 };

@@ -23,6 +23,19 @@ const validate = (schema) => (req, res, next) => {
     }
   }
 
+  // Special handling for PATCH requests with empty bodies
+  if (req.method === 'PATCH' && validSchema.body &&
+    (!object.body || Object.keys(object.body).length === 0)) {
+    // For PATCH requests, we'll skip body validation if body is empty
+    // This allows empty PATCH requests which might be used to trigger side effects
+    console.log('Empty body detected in PATCH request, skipping body validation');
+    delete validSchema.body;
+  }
+
+  if (Object.keys(validSchema).length === 0) {
+    return next();
+  }
+
   const { value, error } = Joi.compile(validSchema)
     .prefs({ errors: { label: 'key' }, abortEarly: false })
     .validate(object);

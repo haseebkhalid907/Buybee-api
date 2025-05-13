@@ -57,9 +57,16 @@ const updateUserById = async (userId, updateBody) => {
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
   }
+
+  // Check if update body is empty
+  if (!updateBody || Object.keys(updateBody).length === 0) {
+    return user; // Return user without changes if nothing to update
+  }
+
   if (updateBody.email && (await User.isEmailTaken(updateBody.email, userId))) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Email already taken');
   }
+
   Object.assign(user, updateBody);
   await user.save();
   return user;
