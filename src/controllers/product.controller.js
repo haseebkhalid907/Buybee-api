@@ -21,11 +21,51 @@ const createProduct = catchAsync(async (req, res) => {
   // Set the seller field to the current user's ID
   const sellerId = req.user.id || req.user._id;
 
-  // If category is a string (name), handle the conversion
-  // (This would require additional category fetching logic which is not implemented here)
+  // Handle flattened boost properties for multipart form data
+  // Check if we have boost properties in the flattened format
+  const requestBody = { ...req.body };
+
+  if (
+    requestBody.boost_active !== undefined ||
+    requestBody.boost_package !== undefined ||
+    requestBody.boost_cost !== undefined ||
+    requestBody.boost_days !== undefined ||
+    requestBody.boost_startDate !== undefined ||
+    requestBody.boost_endDate !== undefined ||
+    requestBody.boost_paymentDetails !== undefined
+  ) {
+    // Create boost object structure
+    requestBody.boost = {
+      active: requestBody.boost_active === 'true' || requestBody.boost_active === true,
+      package: requestBody.boost_package || 'custom',
+      cost: Number(requestBody.boost_cost) || 0,
+      days: Number(requestBody.boost_days) || 0,
+      startDate: requestBody.boost_startDate || new Date().toISOString(),
+      endDate: requestBody.boost_endDate || new Date().toISOString()
+    };
+
+    // Parse payment details if present as string
+    if (requestBody.boost_paymentDetails) {
+      try {
+        requestBody.boost.paymentDetails = JSON.parse(requestBody.boost_paymentDetails);
+      } catch (err) {
+        console.error('Error parsing boost payment details:', err);
+        requestBody.boost.paymentDetails = {};
+      }
+    }
+
+    // Remove flattened properties
+    delete requestBody.boost_active;
+    delete requestBody.boost_package;
+    delete requestBody.boost_cost;
+    delete requestBody.boost_days;
+    delete requestBody.boost_startDate;
+    delete requestBody.boost_endDate;
+    delete requestBody.boost_paymentDetails;
+  }
 
   const product = await productService.createProduct({
-    ...req.body,
+    ...requestBody,
     userId: sellerId, // For tracking 
     seller: sellerId, // Required field in the product model
     images,
@@ -96,7 +136,49 @@ const getProduct = catchAsync(async (req, res) => {
 });
 
 const updateProduct = catchAsync(async (req, res) => {
-  const product = await productService.updateProductById(req.params.productId, req.body);
+  // Handle flattened boost properties for multipart form data
+  const requestBody = { ...req.body };
+
+  if (
+    requestBody.boost_active !== undefined ||
+    requestBody.boost_package !== undefined ||
+    requestBody.boost_cost !== undefined ||
+    requestBody.boost_days !== undefined ||
+    requestBody.boost_startDate !== undefined ||
+    requestBody.boost_endDate !== undefined ||
+    requestBody.boost_paymentDetails !== undefined
+  ) {
+    // Create boost object structure
+    requestBody.boost = {
+      active: requestBody.boost_active === 'true' || requestBody.boost_active === true,
+      package: requestBody.boost_package || 'custom',
+      cost: Number(requestBody.boost_cost) || 0,
+      days: Number(requestBody.boost_days) || 0,
+      startDate: requestBody.boost_startDate || new Date().toISOString(),
+      endDate: requestBody.boost_endDate || new Date().toISOString()
+    };
+
+    // Parse payment details if present as string
+    if (requestBody.boost_paymentDetails) {
+      try {
+        requestBody.boost.paymentDetails = JSON.parse(requestBody.boost_paymentDetails);
+      } catch (err) {
+        console.error('Error parsing boost payment details:', err);
+        requestBody.boost.paymentDetails = {};
+      }
+    }
+
+    // Remove flattened properties
+    delete requestBody.boost_active;
+    delete requestBody.boost_package;
+    delete requestBody.boost_cost;
+    delete requestBody.boost_days;
+    delete requestBody.boost_startDate;
+    delete requestBody.boost_endDate;
+    delete requestBody.boost_paymentDetails;
+  }
+
+  const product = await productService.updateProductById(req.params.productId, requestBody);
   res.send(product);
 });
 

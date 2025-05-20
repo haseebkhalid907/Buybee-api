@@ -34,7 +34,8 @@ const createProduct = {
         expiryDate: Joi.string(),
         transactionId: Joi.string(),
         paymentDate: Joi.date().iso(),
-        paymentStatus: Joi.string() // Adding paymentStatus field
+        paymentStatus: Joi.string(), // Payment status field
+        stripeVerified: Joi.boolean() // Adding stripeVerified field to validation
       })
     }),
   }),
@@ -98,7 +99,8 @@ const updateProduct = {
           expiryDate: Joi.string(),
           transactionId: Joi.string(),
           paymentDate: Joi.date().iso(),
-          paymentStatus: Joi.string() // Adding paymentStatus field
+          paymentStatus: Joi.string(), // Adding paymentStatus field
+          stripeVerified: Joi.boolean() // Adding stripeVerified field to validation
         })
       }),
     })
