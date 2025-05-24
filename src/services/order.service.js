@@ -9,10 +9,15 @@ const createOrder = async (orderBody) => {
 const queryOrders = async (filter, options) => {
   // Create a copy of options to avoid modifying the original object
   const paginateOptions = { ...options };
-  
-  // Use a string for populate as expected by the paginate plugin
-  paginateOptions.populate = 'customer,items.product,items.seller';
-  
+
+  // Use an array of populate objects for more control over selection
+  paginateOptions.populate = [
+    { path: 'customer', select: 'name email' },
+    { path: 'products.productId', select: 'name images price description category' },
+    { path: 'items.product', select: 'name images price description category' },
+    { path: 'items.seller', select: 'name storeName' }
+  ];
+
   const orders = await Order.paginate(filter, paginateOptions);
   return orders;
 };
@@ -20,6 +25,7 @@ const queryOrders = async (filter, options) => {
 const getOrderById = async (id) => {
   return Order.findById(id)
     .populate('customer', 'name email')
+    .populate('products.productId', 'name images price description category')
     .populate('items.product', 'name images price description category')
     .populate('items.seller', 'name storeName');
 };
