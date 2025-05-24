@@ -20,10 +20,10 @@ router.options('*', cors());
 router
   .route('/')
   .post(
-    // auth(),
+    auth(),
     // auth({ action: actions.create, subject: subjects.product }),
     upload.array('images', 10),
-    uploadToCloudinary(), // Upload files to Cloudinary after multer processes them
+    // uploadToCloudinary(), // Upload files to Cloudinary after multer processes them
     categoryResolver, // Added middleware to resolve category names to IDs
     validate(productValidation.createProduct),
     productController.createProduct)
