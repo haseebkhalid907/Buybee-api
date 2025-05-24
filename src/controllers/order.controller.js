@@ -13,11 +13,31 @@ const createOrder = catchAsync(async (req, res) => {
 
 const getOrders = catchAsync(async (req, res) => {
   const filter = pick(req.query, [
-    'name'
+    'name',
+    'status',
+    'userId'
   ]);
   if (filter.name) {
     filter.name = new RegExp(filter.name, 'i');
   }
+
+  // Handle date filtering
+  const { startDate, endDate } = req.query;
+  if (startDate || endDate) {
+    filter.createdAt = {};
+
+    if (startDate) {
+      filter.createdAt.$gte = new Date(startDate);
+    }
+
+    if (endDate) {
+      // Add 1 day to include the entire end date (up to 23:59:59)
+      const endDateObj = new Date(endDate);
+      endDateObj.setDate(endDateObj.getDate() + 1);
+      filter.createdAt.$lt = endDateObj;
+    }
+  }
+
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
   const result = await orderService.queryOrders(filter, options);
   res.send(result);

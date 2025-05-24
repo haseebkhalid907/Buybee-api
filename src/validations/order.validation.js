@@ -37,6 +37,8 @@ const getOrders = {
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
+    startDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/),
+    endDate: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/),
   }),
 };
 

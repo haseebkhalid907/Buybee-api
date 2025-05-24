@@ -7,12 +7,21 @@ const createOrder = async (orderBody) => {
 };
 
 const queryOrders = async (filter, options) => {
-  const orders = await Order.paginate(filter, options);
+  // Create a copy of options to avoid modifying the original object
+  const paginateOptions = { ...options };
+  
+  // Use a string for populate as expected by the paginate plugin
+  paginateOptions.populate = 'customer,items.product,items.seller';
+  
+  const orders = await Order.paginate(filter, paginateOptions);
   return orders;
 };
 
 const getOrderById = async (id) => {
-  return Order.findById(id);
+  return Order.findById(id)
+    .populate('customer', 'name email')
+    .populate('items.product', 'name images price description category')
+    .populate('items.seller', 'name storeName');
 };
 
 /**
