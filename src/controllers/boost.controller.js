@@ -10,9 +10,11 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY || 'sk_test_51OUj
  * @route POST /v1/payments/create-boost-payment
  */
 const createBoostPayment = catchAsync(async (req, res) => {
-    const { amount, paymentMethod, cardDetails, boostData, stripeToken } = req.body;
-    const userId = req.user._id;
+    console.log("🚀 ~ createBoostPayment ~ req.user:", req.user)
 
+    const { amount, paymentMethod, cardDetails, boostData, stripeToken } = req.body;
+    // const userId = req.user._id || req.user.id;
+    let userId = "default"
     // Validate inputs
     if (!amount || amount <= 0) {
         throw new ApiError(httpStatus.BAD_REQUEST, 'Valid payment amount is required');

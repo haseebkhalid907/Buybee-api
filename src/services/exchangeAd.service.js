@@ -1,7 +1,8 @@
 const httpStatus = require('http-status');
-const { ExchangeAd } = require('../models');
+const { ExchangeAd, Category } = require('../models');
 const ApiError = require('../utils/ApiError');
 const { getUserById } = require('./user.service');
+const mongoose = require('mongoose');
 
 /**
  * Create an exchange ad
@@ -12,6 +13,25 @@ const { getUserById } = require('./user.service');
 const createExchangeAd = async (adBody, userId) => {
     // Verify user exists
     await getUserById(userId);
+
+    // If category exists but categoryName is missing, try to fetch it
+    if (adBody.category && !adBody.categoryName && mongoose.Types.ObjectId.isValid(adBody.category)) {
+        try {
+            const category = await Category.findById(adBody.category);
+            if (category) {
+                adBody.categoryName = category.name;
+            }
+        } catch (error) {
+            // Continue without categoryName if lookup fails
+            console.log("Could not fetch category name:", error.message);
+        }
+    }
+
+    // Set a default categoryName if still missing
+    if (!adBody.categoryName) {
+        adBody.categoryName = adBody.category ? `Category ${adBody.category}` : 'Uncategorized';
+    }
+
     return ExchangeAd.create({ ...adBody, user: userId });
 };
 

@@ -3,16 +3,22 @@ const auth = require('../../middlewares/auth');
 const validate = require('../../middlewares/validate');
 const exchangeAdValidation = require('../../validations/exchangeAd.validation');
 const exchangeAdController = require('../../controllers/exchangeAd.controller');
+const upload = require('../../middlewares/upload');
+const cors = require('cors');
 
 const router = express.Router();
+
+// Apply CORS specifically to this router to ensure preflight requests are handled
+router.use(cors());
+router.options('*', cors());
 
 router
     .route('/')
     .post(
-        // auth(),
+        upload.array('images', 10),
+        auth(),
         validate(exchangeAdValidation.createExchangeAd), exchangeAdController.createExchangeAd)
     .get(
-        // auth(),
         validate(exchangeAdValidation.getExchangeAds), exchangeAdController.getExchangeAds);
 
 router
@@ -22,8 +28,17 @@ router
 router
     .route('/:exchangeAdId')
     .get(validate(exchangeAdValidation.getExchangeAd), exchangeAdController.getExchangeAd)
-    .patch(auth(), validate(exchangeAdValidation.updateExchangeAd), exchangeAdController.updateExchangeAd)
-    .delete(auth(), validate(exchangeAdValidation.deleteExchangeAd), exchangeAdController.deleteExchangeAd);
+    .patch(
+        auth(),
+        validate(exchangeAdValidation.updateExchangeAd), exchangeAdController.updateExchangeAd)
+    .delete(
+        auth(),
+        validate(exchangeAdValidation.deleteExchangeAd), exchangeAdController.deleteExchangeAd);
+
+// Add special route for current user (me) - must come before the dynamic userId route
+router
+    .route('/user/me')
+    .get(auth(), exchangeAdController.getCurrentUserExchangeAds);
 
 router
     .route('/user/:userId')
@@ -31,7 +46,9 @@ router
 
 router
     .route('/:exchangeAdId/boost')
-    .patch(auth(), validate(exchangeAdValidation.boostExchangeAd), exchangeAdController.boostExchangeAd);
+    .patch(
+        auth(),
+        validate(exchangeAdValidation.boostExchangeAd), exchangeAdController.boostExchangeAd);
 
 router
     .route('/:exchangeAdId/favorite')

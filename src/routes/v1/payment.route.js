@@ -8,14 +8,20 @@ const validate = require('../../middlewares/validate');
 const router = express.Router();
 
 // Route for creating payment intents
-router.post('/create-payment-intent', auth(), paymentController.createPaymentIntent);
+router.post('/create-payment-intent',
+    // auth(),
+    paymentController.createPaymentIntent);
 
 // Route for processing boost payments - now using boostController
-router.post('/create-boost-payment', auth(), boostController.createBoostPayment);
+router.post('/create-boost-payment',
+    // auth(),
+    boostController.createBoostPayment);
 
 // Route for processing checkout
 router.post('/checkout',
-    auth(),
+
+    // auth(),
+
     paymentController.processCheckout);
 
 // Route for Stripe webhooks

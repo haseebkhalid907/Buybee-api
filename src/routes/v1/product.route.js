@@ -8,14 +8,18 @@ const { actions, subjects } = require('../../config/roles');
 const auth = require('../../middlewares/auth');
 const upload = require('../../middlewares/upload'); // multer
 const categoryResolver = require('../../middlewares/categoryResolver'); // Added category resolver middleware
+const cors = require('cors');
+
 
 const router = express.Router();
+router.use(cors());
+router.options('*', cors());
 
 // Product routes
 router
   .route('/')
   .post(
-    auth(),
+    // auth(),
     // auth({ action: actions.create, subject: subjects.product }),
     upload.array('images', 10),
     categoryResolver, // Added middleware to resolve category names to IDs
@@ -46,16 +50,19 @@ router
 router
   .route('/:productId/reviews')
   .post(
-    auth(), validate(reviewValidation.createReview), reviewController.createReview)
+    // auth(), 
+    validate(reviewValidation.createReview), reviewController.createReview)
   .get(
     validate(reviewValidation.getReviews), reviewController.getReviews);
 
 router
   .route('/:productId/reviews/:reviewId')
   .patch(
-    auth(), validate(reviewValidation.updateReview), reviewController.updateReview)
+    // auth(), 
+    validate(reviewValidation.updateReview), reviewController.updateReview)
   .delete(
-    auth(), validate(reviewValidation.deleteReview), reviewController.deleteReview);
+    // /auth(), 
+    validate(reviewValidation.deleteReview), reviewController.deleteReview);
 
 module.exports = router;
 

@@ -17,8 +17,22 @@ const getUsers = catchAsync(async (req, res) => {
 });
 
 const getUser = catchAsync(async (req, res) => {
-  // Handle the special 'me' parameter by replacing it with the authenticated user's ID
-  const userId = req.params.userId === 'me' ? req.user._id : req.params.userId;
+  // Handle the special 'me' parameter
+  let userId;
+
+  console.log("🚀 ~ getUser ~ req.params:", req.params)
+  console.log("🚀 ~ getUser ~ req.user:", req.user)
+
+  if (req.params.userId === 'me') {
+    // Check if user is authenticated
+    if (!req.user) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Authentication required');
+    }
+    userId = req.user._id || req.user.id;
+  } else {
+    userId = req.params.userId;
+  }
+
   const user = await userService.getUserById(userId);
   if (!user) {
     throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
@@ -27,8 +41,18 @@ const getUser = catchAsync(async (req, res) => {
 });
 
 const updateUser = catchAsync(async (req, res) => {
-  // Handle the special 'me' parameter by replacing it with the authenticated user's ID
-  const userId = req.params.userId === 'me' ? req.user._id : req.params.userId;
+  // Handle the special 'me' parameter
+  let userId;
+
+  if (req.params.userId === 'me') {
+    // Check if user is authenticated
+    if (!req.user) {
+      throw new ApiError(httpStatus.UNAUTHORIZED, 'Authentication required');
+    }
+    userId = req.user._id || req.user.id;
+  } else {
+    userId = req.params.userId;
+  }
   const user = await userService.updateUserById(userId, req.body);
   res.send(user);
 });

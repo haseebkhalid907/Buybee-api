@@ -9,7 +9,11 @@ const logger = require('../config/logger');
  * Create a payment intent for Stripe
  */
 const createPaymentIntent = catchAsync(async (req, res) => {
+    console.log("🚀 ~ createPaymentIntent ~ req.user:", req.user)
+
+
     const user = await userService.getUserById(req.user.id);
+    console.log("🚀 ~ createPaymentIntent ~ user:", user)
 
     // Populate cart to calculate total
     await user.populate('cart.product');
@@ -37,6 +41,7 @@ const createPaymentIntent = catchAsync(async (req, res) => {
         },
         description: `Payment for order by ${user.name}`
     });
+    console.log("🚀 ~ createPaymentIntent ~ paymentIntent:", paymentIntent)
 
     res.status(httpStatus.OK).send(paymentIntent);
 });
@@ -46,6 +51,8 @@ const createPaymentIntent = catchAsync(async (req, res) => {
  */
 const processCheckout = catchAsync(async (req, res) => {
     // Make sure we get the user ID correctly from either req.user.id or req.user._id
+    console.log("🚀 ~ processCheckout ~ req.user:", req.user)
+
     const userId = req.user.id || req.user._id;
     const user = await userService.getUserById(userId);
 

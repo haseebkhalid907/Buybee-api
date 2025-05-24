@@ -50,8 +50,8 @@ const exchangeAdSchema = mongoose.Schema(
         },
         categoryName: {
             type: String,
-            required: true,
             trim: true,
+            // Made optional since clients might not always send it
         },
         exchangeType: {
             type: String,

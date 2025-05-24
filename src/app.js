@@ -58,7 +58,7 @@ app.options('*', cors());
 
 // jwt authentication
 app.use(passport.initialize());
-app.use(passport.session());
+// Remove passport.session() as we're using stateless JWT authentication
 
 passport.use('jwt', jwtStrategy);
 

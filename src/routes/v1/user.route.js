@@ -13,6 +13,12 @@ router
   .get(auth(), userController.getCurrentUser)
   .patch(auth(), validate(userValidation.updateProfile), userController.updateCurrentUser);
 
+// Add direct /me endpoint for current user info
+router
+  .route('/me')
+  .get(auth(), userController.getCurrentUser)
+  .patch(auth(), validate(userValidation.updateProfile), userController.updateCurrentUser);
+
 router
   .route('/')
   .post(
@@ -24,15 +30,9 @@ router
 
 router
   .route('/:userId')
-  .get(
-    // auth({ action: actions.read, subject: subjects.user }),
-    validate(userValidation.getUser), userController.getUser)
-  .patch(
-    // auth({ action: actions.update, subject: subjects.user }),
-    validate(userValidation.updateUser), userController.updateUser)
-  .delete(
-    // auth({ action: actions.delete, subject: subjects.user }),
-    validate(userValidation.deleteUser), userController.deleteUser);
+  .get(validate(userValidation.getUser), userController.getUser)
+  .patch(auth(), validate(userValidation.updateUser), userController.updateUser)
+  .delete(auth(), validate(userValidation.deleteUser), userController.deleteUser);
 
 // Seller Registration routes
 router

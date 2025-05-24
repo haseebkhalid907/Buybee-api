@@ -1,4 +1,5 @@
 const httpStatus = require('http-status');
+const jwt = require('jsonwebtoken');
 const catchAsync = require('../utils/catchAsync');
 const { authService, userService, tokenService, emailService } = require('../services');
 const { roleRights } = require('../config/roles');
@@ -52,7 +53,22 @@ const logout = catchAsync(async (req, res) => {
 
 const refreshTokens = catchAsync(async (req, res) => {
   const tokens = await authService.refreshAuth(req.body.refreshToken);
-  res.send({ ...tokens });
+
+  // Get user information for the cookie
+  const payload = jwt.verify(tokens.access.token, config.jwt.secret);
+  const user = await userService.getUserById(payload.sub);
+
+  // Send both the response and update the cookie for consistent authentication
+  res
+    .cookie('tokens', JSON.stringify({ tokens, user }), {
+      domain: process.env.BASE_PATH,
+      httpOnly: true,
+      sameSite: 'none',
+      secure: true,
+      maxAge: config.jwt.refreshExpirationDays * 24 * 60 * 60 * 1000,
+      expires: tokens.access.expires,
+    })
+    .send({ ...tokens });
 });
 
 const forgotPassword = catchAsync(async (req, res) => {

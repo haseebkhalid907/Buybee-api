@@ -8,11 +8,53 @@ const { exchangeAdService } = require('../services');
  * Create a new exchange ad
  */
 const createExchangeAd = catchAsync(async (req, res) => {
-    const ad = await exchangeAdService.createExchangeAd(req.body
-        // , req.user.id
-    );
+    // Ensure req.user exists (auth middleware should handle this, but as a safety check)
+    if (!req.user) {
+        throw new ApiError(httpStatus.UNAUTHORIZED, 'Authentication required');
+    }
+
+    // Log authentication data for debugging
+    console.log("🚀 ~ createExchangeAd ~ req.user:", req.user);
+    console.log("🚀 ~ createExchangeAd ~ Authorization header:", req.headers.authorization);
+
+    const userId = req.user._id || req.user.id;
+    let images = [];
+
+    // Process uploaded images if available
+    if (req.files && req.files.length > 0) {
+        images = req.files.map(file => `/uploads/${file.filename}`);
+    } else if (req.body.images) {
+        // Handle different image formats from the frontend
+        if (typeof req.body.images === 'string') {
+            try {
+                // Try to parse as JSON array
+                const parsedImages = JSON.parse(req.body.images);
+                if (Array.isArray(parsedImages)) {
+                    images = parsedImages;
+                } else {
+                    // Single image as object or string
+                    images = [req.body.images];
+                }
+            } catch (e) {
+                // If not valid JSON, use as a single image path
+                images = [req.body.images];
+            }
+        } else if (Array.isArray(req.body.images)) {
+            // Already an array
+            images = req.body.images;
+        }
+    }
+
+    const adData = {
+        ...req.body,
+        images,
+        user: userId
+    };
+
+    const ad = await exchangeAdService.createExchangeAd(adData, userId);
     res.status(httpStatus.CREATED).send(ad);
 });
+
 
 /**
  * Get all exchange ads with pagination and filtering
@@ -100,6 +142,26 @@ const searchExchangeAds = catchAsync(async (req, res) => {
     res.send(results);
 });
 
+/**
+ * Get all exchange ads for the currently authenticated user
+ */
+const getCurrentUserExchangeAds = catchAsync(async (req, res) => {
+    // Check if user is authenticated
+    if (!req.user) {
+        throw new ApiError(httpStatus.UNAUTHORIZED, 'Authentication required');
+    }
+
+    // Use either _id or id depending on what's available
+    const userId = req.user._id || req.user.id;
+    console.log("🚀 ~ getCurrentUserExchangeAds ~ userId:", userId);
+
+    const filter = pick(req.query, ['condition', 'category', 'exchangeType', 'status', 'isActive']);
+    const options = pick(req.query, ['sortBy', 'limit', 'page']);
+
+    const result = await exchangeAdService.getExchangeAdsByUserId(userId, filter, options);
+    res.send(result);
+});
+
 module.exports = {
     createExchangeAd,
     getExchangeAds,
@@ -110,4 +172,5 @@ module.exports = {
     boostExchangeAd,
     toggleFavoriteExchangeAd,
     searchExchangeAds,
+    getCurrentUserExchangeAds,
 };
