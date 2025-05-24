@@ -11,7 +11,10 @@ const ApiError = require('../utils/ApiError');
 
 
 const createProduct = catchAsync(async (req, res) => {
-  const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+  // Images are now provided by cloudinaryUpload middleware in req.body.images
+  // If not provided via Cloudinary, fall back to local file paths
+  const images = req.body.images ||
+    (req.files ? req.files.map(file => `/uploads/${file.filename}`) : []);
 
   // Check if user is authenticated
   if (!req.user) {

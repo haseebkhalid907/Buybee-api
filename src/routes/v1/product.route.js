@@ -7,6 +7,7 @@ const reviewController = require('../../controllers/review.controller');
 const { actions, subjects } = require('../../config/roles');
 const auth = require('../../middlewares/auth');
 const upload = require('../../middlewares/upload'); // multer
+const uploadToCloudinary = require('../../middlewares/cloudinaryUpload'); // Cloudinary upload middleware
 const categoryResolver = require('../../middlewares/categoryResolver'); // Added category resolver middleware
 const cors = require('cors');
 
@@ -22,6 +23,7 @@ router
     // auth(),
     // auth({ action: actions.create, subject: subjects.product }),
     upload.array('images', 10),
+    uploadToCloudinary(), // Upload files to Cloudinary after multer processes them
     categoryResolver, // Added middleware to resolve category names to IDs
     validate(productValidation.createProduct),
     productController.createProduct)

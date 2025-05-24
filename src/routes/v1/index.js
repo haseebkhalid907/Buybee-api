@@ -7,6 +7,7 @@ const orderRoute = require('./order.route');
 const categoryRoute = require('./category.route');
 const paymentRoute = require('./payment.route');
 const exchangeAdRoute = require('./exchangeAd.route');
+const uploadRoute = require('./upload.route');
 const config = require('../../config/config');
 
 const router = express.Router();
@@ -39,6 +40,10 @@ const defaultRoutes = [
   {
     path: '/exchange-ads',
     route: exchangeAdRoute
+  },
+  {
+    path: '/uploads',
+    route: uploadRoute
   }
 ];
 
