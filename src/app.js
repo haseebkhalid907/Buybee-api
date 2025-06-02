@@ -73,6 +73,10 @@ if (config.env === 'production') {
 
 // v1 api routes
 app.use('/v1', routes);
+// make static route for check servce is up
+app.get('/v1/health', (req, res) => {
+  res.status(httpStatus.OK).send({ message: 'Service is up and running' });
+});
 
 // send back a 404 error for any unknown api request
 app.use((req, res, next) => {
