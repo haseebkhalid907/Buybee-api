@@ -19,7 +19,11 @@ const { setupCloudinary } = require('./config/cloudinary');
 const app = express();
 
 // Initialize Cloudinary
-setupCloudinary();
+try {
+  setupCloudinary();
+} catch (error) {
+  console.error('Error setting up Cloudinary:', error);
+}
 
 if (config.env !== 'test') {
   app.use(morgan.successHandler);
@@ -30,13 +34,17 @@ if (config.env !== 'test') {
 app.use('/v1/payments/webhook',
   express.raw({ type: 'application/json' }),
   (req, res, next) => {
-    // Store raw body for Stripe webhook verification
-    req.rawBody = req.body;
-    // Parse for our route handlers 
-    if (req.body && req.body.toString) {
-      req.body = JSON.parse(req.body.toString());
+    try {
+      // Store raw body for Stripe webhook verification
+      req.rawBody = req.body;
+      // Parse for our route handlers 
+      if (req.body && req.body.toString) {
+        req.body = JSON.parse(req.body.toString());
+      }
+      next();
+    } catch (error) {
+      next(new ApiError(httpStatus.BAD_REQUEST, 'Invalid JSON payload'));
     }
-    next();
   }
 );
 
@@ -44,10 +52,10 @@ app.use('/v1/payments/webhook',
 app.use(helmet());
 
 // parse json request body
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // parse urlencoded request body
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // sanitize request data
 app.use(xss());
@@ -60,10 +68,31 @@ app.use(compression());
 app.use(cors());
 app.options('*', cors());
 
+// Add a basic health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).send({ status: 'ok', environment: config.env });
+});
+
+// Add serverless warmup endpoint (helps reduce cold starts)
+app.get('/_warmup', (req, res) => {
+  res.status(200).send('OK');
+});
+
+// session
+app.use(
+  session({
+    secret: config.jwt.secret,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: config.env === 'production',
+      httpOnly: true,
+    },
+  })
+);
+
 // jwt authentication
 app.use(passport.initialize());
-// Remove passport.session() as we're using stateless JWT authentication
-
 passport.use('jwt', jwtStrategy);
 
 // limit repeated failed requests to auth endpoints
@@ -73,12 +102,8 @@ if (config.env === 'production') {
 
 // v1 api routes
 app.use('/v1', routes);
-// make static route for check servce is up
-app.get('/v1/health', (req, res) => {
-  res.status(httpStatus.OK).send({ message: 'Service is up and running' });
-});
 
-// send back a 404 error for any unknown api request
+// Handle 404 routes
 app.use((req, res, next) => {
   next(new ApiError(httpStatus.NOT_FOUND, 'Not found'));
 });
