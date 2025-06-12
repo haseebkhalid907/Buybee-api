@@ -2,12 +2,20 @@ const dotenv = require('dotenv');
 const path = require('path');
 const Joi = require('joi');
 
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+// Only load .env file if not in production/serverless environment
+// In serverless, environment variables should be set in the platform
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+  dotenv.config({ path: path.join(__dirname, '../../.env') });
+}
 
+// Check for serverless environment
+const isServerless = !!(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+
+// More flexible validation for serverless environments
 const envVarsSchema = Joi.object()
   .keys({
     NODE_ENV: Joi.string().valid('production', 'development', 'test').required(),
-    PORT: Joi.number().default(3000),
+    PORT: Joi.number().default(isServerless ? 8080 : 3000),
     MONGODB_URL: Joi.string().required().description('Mongo DB url'),
     JWT_SECRET: Joi.string().required().description('JWT secret key'),
     JWT_ACCESS_EXPIRATION_MINUTES: Joi.number().default(30).description('minutes after which access tokens expire'),
@@ -35,12 +43,20 @@ if (error) {
 module.exports = {
   env: envVars.NODE_ENV,
   port: envVars.PORT,
+  isServerless,
   mongoose: {
     url: envVars.MONGODB_URL + (envVars.NODE_ENV === 'test' ? '-test' : ''),
     options: {
       useCreateIndex: true,
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      // Optimize for serverless environment
+      ...(isServerless && {
+        bufferCommands: false, // Disable buffering for better serverless performance
+        serverSelectionTimeoutMS: 5000, // Faster timeouts for serverless
+        socketTimeoutMS: 30000, // Faster socket timeouts for serverless
+        maxPoolSize: 10, // Limit connections in serverless environment
+      })
     },
   },
   jwt: {

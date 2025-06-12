@@ -6,7 +6,7 @@ const logger = require('./config/logger');
 // Check if we're in a serverless environment (Vercel)
 const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
 
-// Connect to MongoDB with better error handling for serverless
+// Connect to MongoDB - with enhanced error handling for serverless
 async function connectToMongo() {
   try {
     await mongoose.connect(config.mongoose.url, config.mongoose.options);
@@ -23,7 +23,7 @@ async function connectToMongo() {
 if (isServerless) {
   // For serverless, just ensure MongoDB connects
   connectToMongo();
-  logger.info('Running in serverless mode');
+  
   // Export the Express app for serverless
   module.exports = app;
 } else {
@@ -66,33 +66,32 @@ if (isServerless) {
       logger.info(`WebSocket server running at ws://localhost:${config.port}/ws`);
     });
       
-    // Handle graceful shutdown
-    const exitHandler = () => {
-      if (server) {
-        server.close(() => {
-          logger.info('Server closed');
+      // Handle graceful shutdown
+      const exitHandler = () => {
+        if (server) {
+          server.close(() => {
+            logger.info('Server closed');
+            process.exit(1);
+          });
+        } else {
           process.exit(1);
-        });
-      } else {
-        process.exit(1);
-      }
-    };
+        }
+      };
 
-    const unexpectedErrorHandler = (error) => {
-      logger.error(error);
-      exitHandler();
-    };
+      const unexpectedErrorHandler = (error) => {
+        logger.error(error);
+        exitHandler();
+      };
 
-    process.on('uncaughtException', unexpectedErrorHandler);
-    process.on('unhandledRejection', unexpectedErrorHandler);
+      process.on('uncaughtException', unexpectedErrorHandler);
+      process.on('unhandledRejection', unexpectedErrorHandler);
 
-    process.on('SIGTERM', () => {
-      logger.info('SIGTERM received');
-      if (server) {
-        server.close();
-      }
+      process.on('SIGTERM', () => {
+        logger.info('SIGTERM received');
+        if (server) {
+          server.close();
+        }
+      });
     });
-  }).catch(err => {
-    logger.error('Failed to connect to MongoDB', err);
   });
 }

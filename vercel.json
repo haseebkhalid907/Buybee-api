@@ -1,6 +1,28 @@
 {
     "version": 2,
-    "name": "adeel",
-    "builds": [{ "src": "src/index.js", "use": "@vercel/node" }],
-    "routes": [{ "src": "/(.*)", "dest": "/src/index.js" }]
+    "name": "buybee-api",
+    "builds": [
+      { "src": "src/index.js", "use": "@vercel/node" },
+      { "src": "src/api/vercel-healthcheck.js", "use": "@vercel/node" },
+      { "src": "src/scripts/vercel-diagnostics.js", "use": "@vercel/node" }
+    ],
+    "routes": [
+      { "src": "/health", "dest": "/src/api/vercel-healthcheck.js" },
+      { "src": "/diagnostics", "dest": "/src/scripts/vercel-diagnostics.js" },
+      { "src": "/(.*)", "dest": "/src/index.js" }
+    ],
+    "env": {
+      "NODE_ENV": "production"
+    },
+    "regions": ["dxb1"],
+    "functions": {
+      "src/index.js": {
+        "memory": 1024,
+        "maxDuration": 10
+      },
+      "src/api/vercel-healthcheck.js": {
+        "memory": 256,
+        "maxDuration": 5
+      }
+    }
   }
