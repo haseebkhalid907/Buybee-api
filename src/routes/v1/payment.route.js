@@ -20,7 +20,7 @@ router.post('/create-boost-payment',
 // Route for processing checkout
 router.post('/checkout',
 
-    // auth(),
+    auth(),
 
     paymentController.processCheckout);
 
