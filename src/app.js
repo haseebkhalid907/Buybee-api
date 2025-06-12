@@ -70,7 +70,7 @@ app.options('*', cors());
 
 // Add a basic health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).send({ status: 'ok', environment: config.env,status:"im_seeb" });
+  res.status(200).send({ status: 'ok', environment: config.env,admin:"im_seeb" });
 });
 
 // Add serverless warmup endpoint (helps reduce cold starts)
