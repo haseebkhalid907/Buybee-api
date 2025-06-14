@@ -110,6 +110,12 @@ const getProducts = catchAsync(async (req, res) => {
   }
 
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
+  
+  // Add populate option if provided in query
+  if (req.query.populate) {
+    options.populate = req.query.populate;
+  }
+  
   const result = await productService.queryProducts(filter, options);
   res.send(result);
 });
@@ -126,12 +132,24 @@ const getUserProducts = catchAsync(async (req, res) => {
     filter.name = new RegExp(filter.name, 'i');
   }
   const options = pick(req.query, ['sortBy', 'limit', 'page']);
+  
+  // Add populate option if provided in query
+  if (req.query.populate) {
+    options.populate = req.query.populate;
+  }
+  
   const result = await productService.queryProducts(filter, options);
   res.send(result);
 });
 
 const getProduct = catchAsync(async (req, res) => {
-  const product = await productService.getProductById(req.params.productId);
+  // Get populate option from query params
+  const options = {};
+  if (req.query.populate) {
+    options.populate = req.query.populate;
+  }
+  
+  const product = await productService.getProductById(req.params.productId, options);
   if (!product) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Product not found');
   }

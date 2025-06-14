@@ -7,12 +7,31 @@ const createProduct = async (productBody) => {
 };
 
 const queryProducts = async (filter, options) => {
-  const products = await Product.paginate(filter, options);
+  // Handle populate option
+  const populateOptions = { ...options };
+  
+  // If populate option is provided, add it to the options
+  if (options.populate) {
+    populateOptions.populate = options.populate;
+  }
+  
+  const products = await Product.paginate(filter, populateOptions);
   return products;
 };
 
-const getProductById = async (id) => {
-  return Product.findById(id);
+const getProductById = async (id, options = {}) => {
+  let query = Product.findById(id);
+  
+  // If populate option is provided, add it to the query
+  if (options.populate) {
+    if (typeof options.populate === 'string') {
+      options.populate.split(',').forEach((field) => {
+        query = query.populate(field);
+      });
+    }
+  }
+  
+  return query.exec();
 };
 
 const updateProductById = async (productId, updateBody) => {

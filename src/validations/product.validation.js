@@ -53,12 +53,16 @@ const getProducts = {
     sortBy: Joi.string(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
+    populate: Joi.string(), // Adding populate parameter to allow category population
   }),
 };
 
 const getProduct = {
   params: Joi.object().keys({
     productId: Joi.string().custom(objectId),
+  }),
+  query: Joi.object().keys({
+    populate: Joi.string(), // Allow populate parameter in the query
   }),
 };
 
