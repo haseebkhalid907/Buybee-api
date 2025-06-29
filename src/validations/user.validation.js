@@ -126,6 +126,7 @@ const updateProfile = {
       email: Joi.string().email(),
       password: Joi.string().custom(password),
       name: Joi.string(),
+      phone: Joi.string(), // Add phone field
       role: Joi.string().valid('buyer', 'seller', 'admin'), // Added role field with valid values
       // Add sellerProfile fields
       sellerProfile: Joi.object().keys({
@@ -168,6 +169,13 @@ const updateProfile = {
     .min(1),
 };
 
+const changePassword = {
+  body: Joi.object().keys({
+    currentPassword: Joi.string().required(),
+    newPassword: Joi.string().required().custom(password),
+  }),
+};
+
 module.exports = {
   createUser,
   getUsers,
@@ -176,5 +184,6 @@ module.exports = {
   deleteUser,
   updateSellerRegistrationStep,
   getSellerRegistrationStatus,
-  updateProfile
+  updateProfile,
+  changePassword
 };

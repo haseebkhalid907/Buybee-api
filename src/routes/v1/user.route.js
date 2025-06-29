@@ -74,6 +74,11 @@ router
   .patch(auth(), userController.updateCartItem)
   .delete(auth(), userController.removeFromCart);
 
+// Change password route
+router
+  .route('/me/change-password')
+  .patch(auth(), validate(userValidation.changePassword), userController.changePassword);
+
 module.exports = router;
 
 /**

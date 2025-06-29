@@ -351,6 +351,28 @@ const updateCurrentUser = catchAsync(async (req, res) => {
   res.send(user);
 });
 
+const changePassword = catchAsync(async (req, res) => {
+  const userId = req.user._id;
+  const { currentPassword, newPassword } = req.body;
+
+  const user = await userService.getUserById(userId);
+  if (!user) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  // Check if current password is correct
+  const isCurrentPasswordValid = await user.isPasswordMatch(currentPassword);
+  if (!isCurrentPasswordValid) {
+    throw new ApiError(httpStatus.UNAUTHORIZED, 'Current password is incorrect');
+  }
+
+  // Update password
+  user.password = newPassword;
+  await user.save();
+
+  res.status(httpStatus.OK).send({ message: 'Password changed successfully' });
+});
+
 module.exports = {
   createUser,
   getUsers,
@@ -369,4 +391,5 @@ module.exports = {
   getSellerRegistrationStatus,
   getCurrentUser,
   updateCurrentUser,
+  changePassword,
 };
