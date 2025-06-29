@@ -16,7 +16,7 @@ const exchangeAdSchema = mongoose.Schema(
         condition: {
             type: String,
             enum: ['new', 'used', 'like-new', 'good', 'fair', 'poor'],
-            default: 'used',
+            default: 'good',
         },
         price: {
             type: Number,
@@ -87,6 +87,10 @@ const exchangeAdSchema = mongoose.Schema(
         //     ref: 'User',
         //     required: true,
         // },
+        showPhoneNumber: {
+            type: Boolean,
+            default: false,
+        },
         views: {
             type: Number,
             default: 0,

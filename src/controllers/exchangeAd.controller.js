@@ -47,6 +47,7 @@ const createExchangeAd = catchAsync(async (req, res) => {
 
     const adData = {
         ...req.body,
+        condition: req.body.condition || 'good', // Default to 'good' if not provided
         images,
         user: userId
     };

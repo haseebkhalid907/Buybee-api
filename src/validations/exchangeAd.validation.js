@@ -14,7 +14,7 @@ const createExchangeAd = {
         category: Joi.string(),
         categoryName: Joi.string(),
         brand: Joi.string().required(),
-        condition: Joi.string().valid('new', 'used', 'like-new', 'good', 'fair', 'poor').required(),
+        condition: Joi.string().valid('new', 'used', 'like-new', 'good', 'fair', 'poor').default('good'),
         price: Joi.number().min(0).required(),
         desiredItems: Joi.alternatives().try(
             Joi.array().items(Joi.string()),
@@ -35,7 +35,7 @@ const createExchangeAd = {
         isActive: Joi.boolean().default(true),
         exchangeType: Joi.string().valid('outright', 'swap', 'both'),
         city: Joi.string().allow('', null),
-        showPhoneNumber: Joi.boolean(),
+        showPhoneNumber: Joi.boolean().default(false),
         featured: Joi.boolean(),
         boost: Joi.object().allow(null),
         attributes: Joi.object().pattern(/.*/, Joi.string()).allow(null),
