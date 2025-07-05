@@ -99,6 +99,7 @@ const createProduct = catchAsync(async (req, res) => {
 const getProducts = catchAsync(async (req, res) => {
   const filter = pick(req.query, [
     'name',
+    'search',
     'category',
     'categoryId',
     'type',
@@ -106,9 +107,21 @@ const getProducts = catchAsync(async (req, res) => {
     'startDate',
     'endDate'
   ]);
+  
+  // Handle search parameter - search in name and description
+  if (filter.search) {
+    const searchRegex = new RegExp(filter.search, 'i');
+    filter.$or = [
+      { name: searchRegex },
+      { description: searchRegex }
+    ];
+    delete filter.search;
+  }
+  
   if (filter.name) {
     filter.name = new RegExp(filter.name, 'i');
   }
+  
   // Map categoryId to category field if provided
   if (filter.categoryId) {
     filter.category = filter.categoryId;

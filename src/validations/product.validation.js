@@ -84,6 +84,7 @@ const createProduct = {
 const getProducts = {
   query: Joi.object().keys({
     name: Joi.string(),
+    search: Joi.string(), // Add search parameter
     category: Joi.string(),
     categoryId: Joi.string().custom(objectId),
     type: Joi.string(),
