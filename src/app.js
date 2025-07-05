@@ -57,6 +57,20 @@ app.use(express.json({ limit: '10mb' }));
 // parse urlencoded request body
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Debug middleware to log request details
+app.use((req, res, next) => {
+  if (req.method === 'POST' && req.path.includes('/products')) {
+    console.log('🚀 ~ Product POST request received:');
+    console.log('  - Content-Type:', req.get('Content-Type'));
+    console.log('  - Method:', req.method);
+    console.log('  - Path:', req.path);
+    console.log('  - Headers:', req.headers);
+    console.log('  - Body type:', typeof req.body);
+    console.log('  - Has files:', !!req.files);
+  }
+  next();
+});
+
 // sanitize request data
 app.use(xss());
 app.use(mongoSanitize());
@@ -65,7 +79,13 @@ app.use(mongoSanitize());
 app.use(compression());
 
 // enable cors
-app.use(cors());
+app.use(cors({
+  origin: true, // Allow all origins for development
+  credentials: true, // Allow cookies and auth headers
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-User-View', 'Accept'],
+  exposedHeaders: ['Content-Type', 'Authorization']
+}));
 app.options('*', cors());
 
 // Add a basic health check endpoint

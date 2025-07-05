@@ -49,6 +49,19 @@ const productSchema = mongoose.Schema(
       type: String,
       trim: true,
     },
+    size: {
+      type: String,
+      trim: true,
+    },
+    colors: {
+      type: String,
+      trim: true,
+    },
+    type: {
+      type: String,
+      enum: ['new', 'used'],
+      default: 'new',
+    },
     exchangeable: {
       type: String,
       trim: true,
@@ -79,6 +92,16 @@ const productSchema = mongoose.Schema(
       type: String,
       trim: true,
     }],
+    variationStock: {
+      type: Map,
+      of: {
+        quantity: String,
+        available: String,
+        reserved: String,
+        sold: String
+      },
+      default: {}
+    },
     featured: {
       type: Boolean,
       default: false,

@@ -11,10 +11,19 @@ const ApiError = require('../utils/ApiError');
 
 
 const createProduct = catchAsync(async (req, res) => {
+  console.log('🚀 ~ createProduct called');
+  console.log('🚀 ~ Request method:', req.method);
+  console.log('🚀 ~ Request content-type:', req.get('Content-Type'));
+  console.log('🚀 ~ Request body keys:', Object.keys(req.body));
+  console.log('🚀 ~ Request files:', req.files ? req.files.length : 0);
+  console.log('🚀 ~ Request user:', req.user ? req.user.id : 'No user');
+  
   // Images are now provided by cloudinaryUpload middleware in req.body.images
   // If not provided via Cloudinary, fall back to local file paths
   const images = req.body.images ||
     (req.files ? req.files.map(file => `/uploads/${file.filename}`) : []);
+
+  console.log('🚀 ~ Images processed:', images.length);
 
   // Check if user is authenticated
   if (!req.user) {
@@ -23,10 +32,12 @@ const createProduct = catchAsync(async (req, res) => {
 
   // Set the seller field to the current user's ID
   const sellerId = req.user.id || req.user._id;
+  console.log('🚀 ~ Seller ID:', sellerId);
 
   // Handle flattened boost properties for multipart form data
   // Check if we have boost properties in the flattened format
   const requestBody = { ...req.body };
+  console.log('🚀 ~ Request body before processing:', requestBody);
 
   if (
     requestBody.boost_active !== undefined ||
@@ -67,6 +78,13 @@ const createProduct = catchAsync(async (req, res) => {
     delete requestBody.boost_paymentDetails;
   }
 
+  console.log('🚀 ~ Final product data:', {
+    ...requestBody,
+    userId: sellerId,
+    seller: sellerId,
+    images,
+  });
+
   const product = await productService.createProduct({
     ...requestBody,
     userId: sellerId, // For tracking 
@@ -74,6 +92,7 @@ const createProduct = catchAsync(async (req, res) => {
     images,
   });
 
+  console.log('🚀 ~ Product created successfully:', product._id);
   res.status(httpStatus.CREATED).send(product);
 });
 
